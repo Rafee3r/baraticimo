@@ -7,10 +7,17 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@prisma/client':
+        specifier: 5.22.0
+        version: 5.22.0(prisma@5.22.0)
     devDependencies:
       '@types/node':
         specifier: ^22.9.0
         version: 22.19.19
+      prisma:
+        specifier: 5.22.0
+        version: 5.22.0
       turbo:
         specifier: ^2.3.0
         version: 2.9.12

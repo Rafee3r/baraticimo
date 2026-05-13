@@ -14,11 +14,15 @@
     "scrape:jumbo": "pnpm --filter @baraticimo/scrapers scrape:jumbo"
   },
   "devDependencies": {
+    "@types/node": "^22.9.0",
+    "prisma": "5.22.0",
     "turbo": "^2.3.0",
-    "typescript": "^5.6.3",
-    "@types/node": "^22.9.0"
+    "typescript": "^5.6.3"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0"
   }
 }

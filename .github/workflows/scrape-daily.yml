@@ -1,0 +1,46 @@
+name: Scrape diario
+
+on:
+  # Cron en UTC. 06:00 UTC = 03:00 Chile (CLT, UTC-3) / 02:00 (CLST verano)
+  # Lo dejamos a las 3 AM local para no chocar con el horario peak de los sitios.
+  schedule:
+    - cron: "0 6 * * *"
+  # También permite ejecución manual desde la UI de GitHub
+  workflow_dispatch:
+    inputs:
+      chains:
+        description: "Cadenas a scrapear (coma-separadas, vacío = todas)"
+        required: false
+        default: ""
+      limit:
+        description: "Máximo de productos por categoría"
+        required: false
+        default: "50"
+
+jobs:
+  jumbo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name == 'schedule' || inputs.chains == '' || contains(inputs.chains, 'jumbo') }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate --schema infra/prisma/schema.prisma
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Scrape Jumbo
+        run: pnpm scrape:jumbo --limit=${{ inputs.limit || '50' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SCRAPER_USER_AGENT: "BaraticimoBot/0.1 (+https://github.com/Rafee3r/baraticimo)"
+          SCRAPER_RATE_LIMIT_PER_SEC: "3"
