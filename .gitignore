@@ -1,0 +1,18 @@
+node_modules/
+.turbo/
+.next/
+dist/
+build/
+.expo/
+.expo-shared/
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+coverage/
+.vscode/
+.idea/
+
+# Prisma
+infra/prisma/migrations/dev.db*

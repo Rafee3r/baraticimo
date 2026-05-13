@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Precios Chile",
+    "slug": "precios-chile",
+    "scheme": "precioschile",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "cl.precioschile.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Usamos tu ubicación para mostrarte precios de supermercados y farmacias cerca tuyo."
+      }
+    },
+    "android": {
+      "package": "cl.precioschile.app",
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Usamos tu ubicación para mostrarte precios cerca tuyo."
+        }
+      ]
+    ]
+  }
+}

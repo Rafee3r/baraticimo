@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ChainKind {
+  SUPERMARKET
+  PHARMACY
+}
+
+model Chain {
+  id        String     @id @default(cuid())
+  slug      String     @unique
+  name      String
+  kind      ChainKind
+  websiteUrl String
+  logoUrl   String?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+
+  stores        Store[]
+  chainProducts ChainProduct[]
+}
+
+model Comuna {
+  id       String  @id @default(cuid())
+  name     String
+  region   String
+  // Codigo SUBDERE (5 digitos), unico por comuna
+  code     String  @unique
+  stores   Store[]
+
+  @@index([region])
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  chainId   String
+  chain     Chain    @relation(fields: [chainId], references: [id])
+  comunaId  String
+  comuna    Comuna   @relation(fields: [comunaId], references: [id])
+  name      String
+  address   String
+  lat       Float
+  lng       Float
+  isActive  Boolean  @default(true)
+
+  prices    Price[]
+
+  @@index([chainId])
+  @@index([comunaId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  // Producto canonico normalizado (resultado del matcher IA)
+  name        String
+  brand       String?
+  format      String?   // "1.5L", "500g", etc
+  category    String?
+  barcode     String?   @unique
+  imageUrl    String?
+  createdAt   DateTime  @default(now())
+
+  chainProducts ChainProduct[]
+
+  @@index([name])
+}
+
+model ChainProduct {
+  id         String   @id @default(cuid())
+  chainId    String
+  chain      Chain    @relation(fields: [chainId], references: [id])
+  productId  String?  // null = aun no matcheado al producto canonico
+  product    Product? @relation(fields: [productId], references: [id])
+  // SKU/ID del producto en la cadena (lo que devuelve VTEX)
+  externalId String
+  name       String
+  brand      String?
+  format     String?
+  imageUrl   String?
+  url        String
+  // Confianza del match IA (0-1); null si aun no se intento matchear
+  matchConfidence Float?
+  needsReview     Boolean  @default(false)
+  lastSeenAt DateTime  @default(now())
+
+  prices     Price[]
+
+  @@unique([chainId, externalId])
+  @@index([productId])
+  @@index([needsReview])
+}
+
+enum PriceSource {
+  VTEX_API
+  PLAYWRIGHT
+  AI_PARSER
+  CROWDSOURCE
+}
+
+model Price {
+  id             String   @id @default(cuid())
+  chainProductId String
+  chainProduct   ChainProduct @relation(fields: [chainProductId], references: [id])
+  // null = precio nacional/web (no especifico a sucursal)
+  storeId        String?
+  store          Store?   @relation(fields: [storeId], references: [id])
+  price          Decimal  @db.Decimal(10, 2)
+  listPrice      Decimal? @db.Decimal(10, 2)  // precio sin oferta
+  currency       String   @default("CLP")
+  isOnSale       Boolean  @default(false)
+  source         PriceSource
+  scrapedAt      DateTime @default(now())
+
+  @@index([chainProductId, scrapedAt])
+  @@index([storeId])
+}
+
+model PriceHistory {
+  id             String   @id @default(cuid())
+  chainProductId String
+  storeId        String?
+  price          Decimal  @db.Decimal(10, 2)
+  scrapedAt      DateTime
+
+  @@index([chainProductId, scrapedAt])
+}
