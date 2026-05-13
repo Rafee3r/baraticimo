@@ -18,14 +18,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-
-      - name: Debug versions
-        run: |
-          node --version
-          pnpm --version
-          echo "Lockfile version:"
-          head -1 pnpm-lock.yaml
+          node-version: 22
 
       - run: pnpm install --frozen-lockfile
 
