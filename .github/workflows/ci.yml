@@ -13,10 +13,19 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.1
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Debug versions
+        run: |
+          node --version
+          pnpm --version
+          echo "Lockfile version:"
+          head -1 pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
 
