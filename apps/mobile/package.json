@@ -1,5 +1,5 @@
 {
-  "name": "@precios/mobile",
+  "name": "@baraticimo/mobile",
   "version": "0.0.1",
   "private": true,
   "main": "expo-router/entry",
@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@precios/types": "workspace:*",
+    "@baraticimo/types": "workspace:*",
     "expo": "~52.0.0",
     "expo-constants": "~17.0.0",
     "expo-linking": "~7.0.0",

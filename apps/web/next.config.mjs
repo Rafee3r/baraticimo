@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@precios/types"],
+  transpilePackages: ["@baraticimo/types"],
   images: {
     remotePatterns: [{ protocol: "https", hostname: "**" }],
   },

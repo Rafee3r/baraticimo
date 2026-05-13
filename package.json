@@ -1,5 +1,5 @@
 {
-  "name": "precios-chile",
+  "name": "baraticimo",
   "private": true,
   "version": "0.0.1",
   "packageManager": "pnpm@11.1.1",
@@ -8,10 +8,10 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "db:generate": "pnpm --filter @precios/api prisma generate",
-    "db:migrate": "pnpm --filter @precios/api prisma migrate dev",
-    "db:seed": "pnpm --filter @precios/api db:seed",
-    "scrape:jumbo": "pnpm --filter @precios/scrapers scrape:jumbo"
+    "db:generate": "pnpm --filter @baraticimo/api prisma generate",
+    "db:migrate": "pnpm --filter @baraticimo/api prisma migrate dev",
+    "db:seed": "pnpm --filter @baraticimo/api db:seed",
+    "scrape:jumbo": "pnpm --filter @baraticimo/scrapers scrape:jumbo"
   },
   "devDependencies": {
     "turbo": "^2.3.0",

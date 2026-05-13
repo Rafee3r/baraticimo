@@ -1,20 +1,20 @@
 {
   "expo": {
-    "name": "Precios Chile",
-    "slug": "precios-chile",
-    "scheme": "precioschile",
+    "name": "Baratícimo",
+    "slug": "baraticimo",
+    "scheme": "baraticimo",
     "version": "0.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "cl.precioschile.app",
+      "bundleIdentifier": "cl.baraticimo.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Usamos tu ubicación para mostrarte precios de supermercados y farmacias cerca tuyo."
       }
     },
     "android": {
-      "package": "cl.precioschile.app",
+      "package": "cl.baraticimo.app",
       "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
     },
     "plugins": [

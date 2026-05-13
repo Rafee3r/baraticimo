@@ -4,7 +4,7 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@precios/web", "dev"],
+      "runtimeArgs": ["--filter", "@baraticimo/web", "dev"],
       "port": 3000
     }
   ]

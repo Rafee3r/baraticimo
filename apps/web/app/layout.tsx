@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Precios Chile — Compara precios de supermercados y farmacias",
+  title: "Baratícimo — Compara precios de supermercados y farmacias",
   description: "Encuentra el supermercado o farmacia más barato cerca tuyo en Chile.",
 };
 

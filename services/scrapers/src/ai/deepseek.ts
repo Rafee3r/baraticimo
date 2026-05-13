@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ParsedProduct } from "@precios/types";
+import type { ParsedProduct } from "@baraticimo/types";
 
 const ParsedProductSchema = z.object({
   name: z.string(),

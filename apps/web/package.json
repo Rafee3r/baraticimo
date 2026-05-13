@@ -1,5 +1,5 @@
 {
-  "name": "@precios/web",
+  "name": "@baraticimo/web",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@precios/types": "workspace:*",
+    "@baraticimo/types": "workspace:*",
     "@tanstack/react-query": "^5.59.20",
     "@trpc/client": "^11.0.0-rc.638",
     "@trpc/react-query": "^11.0.0-rc.638",

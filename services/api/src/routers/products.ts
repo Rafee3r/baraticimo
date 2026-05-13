@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc.js";
-import type { PriceQuote, ProductWithQuotes } from "@precios/types";
+import type { PriceQuote, ProductWithQuotes } from "@baraticimo/types";
 
 export const productsRouter = router({
   search: publicProcedure

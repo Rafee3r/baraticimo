@@ -1,5 +1,5 @@
 {
-  "name": "@precios/scrapers",
+  "name": "@baraticimo/scrapers",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
-    "@precios/types": "workspace:*",
+    "@baraticimo/types": "workspace:*",
     "bullmq": "^5.27.0",
     "ioredis": "^5.4.1",
     "p-limit": "^6.1.0",

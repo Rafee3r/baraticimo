@@ -1,6 +1,6 @@
 import pLimit from "p-limit";
 
-const USER_AGENT = process.env.SCRAPER_USER_AGENT ?? "PreciosChileBot/0.1 (+contacto@example.cl)";
+const USER_AGENT = process.env.SCRAPER_USER_AGENT ?? "BaraticimoBot/0.1 (+contacto@example.cl)";
 const RATE_LIMIT = Number(process.env.SCRAPER_RATE_LIMIT_PER_SEC ?? 3);
 
 /**

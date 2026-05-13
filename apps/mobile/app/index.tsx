@@ -32,7 +32,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Precios Chile</Text>
+        <Text style={styles.title}>Baratícimo</Text>
         <Text style={styles.subtitle}>
           Compara precios entre supermercados y farmacias de todo Chile.
         </Text>

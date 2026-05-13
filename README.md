@@ -1,4 +1,4 @@
-# Precios Chile
+# Baratícimo
 
 App móvil + web para comparar precios de productos entre supermercados (Jumbo, Líder, Santa Isabel, Tottus, Unimarc) y farmacias (Cruz Verde, Salcobrand, Ahumada) en Chile.
 

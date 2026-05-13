@@ -1,5 +1,5 @@
 {
-  "name": "@precios/api",
+  "name": "@baraticimo/api",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "@hono/node-server": "^1.13.7",
     "@hono/trpc-server": "^0.3.4",
     "@prisma/client": "^5.22.0",
-    "@precios/types": "workspace:*",
+    "@baraticimo/types": "workspace:*",
     "@trpc/server": "^11.0.0-rc.638",
     "hono": "^4.6.10",
     "ioredis": "^5.4.1",
