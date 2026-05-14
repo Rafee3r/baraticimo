@@ -136,3 +136,80 @@ export async function getStats() {
   ]);
   return { productCount, priceCount, saleCount, onlineOnlyCount };
 }
+
+/** Productos por ID (para lista y favoritos). */
+export async function getProductsByIds(ids: string[]): Promise<ProductRow[]> {
+  if (ids.length === 0) return [];
+  const cps = await prisma.chainProduct.findMany({
+    where: { id: { in: ids } },
+    include: {
+      chain: true,
+      prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
+    },
+  });
+  return cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
+}
+
+/** Encontrar el mismo producto en otras cadenas usando similitud de nombre. */
+export async function getCrossChainMatches(
+  productId: string,
+  limit = 5,
+): Promise<ProductRow[]> {
+  const source = await prisma.chainProduct.findUnique({
+    where: { id: productId },
+    select: { name: true, chainId: true },
+  });
+  if (!source) return [];
+
+  // Heurística simple: tomar las 3 palabras más largas del nombre y buscar
+  // chainProducts en OTRAS cadenas que las contengan todas.
+  const words = source.name
+    .toLowerCase()
+    .replace(/[^\wáéíóúñ\s]/gi, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 4)
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 3);
+
+  if (words.length === 0) return [];
+
+  const candidates = await prisma.chainProduct.findMany({
+    where: {
+      chainId: { not: source.chainId },
+      AND: words.map((w) => ({ name: { contains: w, mode: "insensitive" as const } })),
+    },
+    include: {
+      chain: true,
+      prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
+    },
+    take: limit,
+  });
+
+  return candidates
+    .map(rowFromChainProduct)
+    .filter((r): r is ProductRow => r !== null)
+    .sort((a, b) => a.price - b.price);
+}
+
+/** Las 8 categorías de la home en formato (categoría → 6 productos top). */
+export async function getOffersByKeyword(keyword: string, limit = 8): Promise<ProductRow[]> {
+  const cps = await prisma.chainProduct.findMany({
+    where: { name: { contains: keyword, mode: "insensitive" } },
+    include: {
+      chain: true,
+      prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
+    },
+    take: 50,
+    orderBy: { lastSeenAt: "desc" },
+  });
+  return cps
+    .map(rowFromChainProduct)
+    .filter((r): r is ProductRow => r !== null)
+    .sort((a, b) => {
+      // Priorizar ofertas con buen %
+      const aP = a.ahorroPct ?? -1;
+      const bP = b.ahorroPct ?? -1;
+      return bP - aP;
+    })
+    .slice(0, limit);
+}

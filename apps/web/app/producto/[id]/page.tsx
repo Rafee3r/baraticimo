@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProductDetail } from "../../../lib/queries";
+import {
+  getCrossChainMatches,
+  getProductDetail,
+} from "../../../lib/queries";
+import { FavoriteButton } from "../../../components/FavoriteButton";
+import { AddToListButton } from "../../../components/AddToListButton";
 
 export const revalidate = 120;
 
@@ -21,18 +26,32 @@ function timeAgo(iso: string) {
   return `hace ${d}d`;
 }
 
+const CHAIN_DOMAINS: Record<string, string> = {
+  jumbo: "www.jumbo.cl",
+  "santa-isabel": "www.santaisabel.cl",
+  lider: "www.lider.cl",
+  tottus: "www.tottus.cl",
+  unimarc: "www.unimarc.cl",
+};
+
 export default async function ProductPage({ params }: Props) {
   const { id } = await params;
   const data = await getProductDetail(id);
   if (!data) return notFound();
   const { row: p, history } = data;
 
+  const matches = await getCrossChainMatches(id, 4);
+
   const minHist = history.length > 0 ? Math.min(...history.map((h) => h.price)) : p.price;
   const maxHist = history.length > 0 ? Math.max(...history.map((h) => h.price)) : p.price;
   const span = maxHist - minHist || 1;
-  const externalHref = p.url.startsWith("http")
-    ? p.url
-    : `https://www.${p.chainSlug === "santa-isabel" ? "santaisabel" : p.chainSlug}.cl${p.url}`;
+
+  const domain = CHAIN_DOMAINS[p.chainSlug] ?? "www.jumbo.cl";
+  const externalHref = p.url.startsWith("http") ? p.url : `https://${domain}${p.url}`;
+
+  // Si hay matches y alguno es más barato
+  const cheaperMatch = matches.find((m) => m.price < p.price);
+  const cheaperAhorro = cheaperMatch ? p.price - cheaperMatch.price : 0;
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-4 sm:px-6 sm:pt-6">
@@ -63,6 +82,9 @@ export default async function ProductPage({ params }: Props) {
               −{p.ahorroPct}%
             </span>
           )}
+          <div className="absolute right-4 top-4">
+            <FavoriteButton productId={p.id} size="md" />
+          </div>
         </div>
       </div>
 
@@ -107,18 +129,82 @@ export default async function ProductPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Comparativa entre cadenas (placeholder hasta tener el matcher) */}
-      <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-neutral-200">
-        <h2 className="text-sm font-semibold text-neutral-900">
-          ¿Más barato en otra cadena?
-        </h2>
-        <p className="mt-1 text-xs text-neutral-500">
-          Pronto activaremos la comparación entre cadenas. Por ahora solo
-          mostramos el precio en <strong>{p.chainName}</strong>.
-        </p>
+      {/* Add to list */}
+      <div className="mt-4">
+        <AddToListButton productId={p.id} size="lg" />
       </div>
 
-      {/* Historial visual */}
+      {/* Cross-chain matches */}
+      <section className="mt-5">
+        <h2 className="text-base font-semibold">
+          {cheaperMatch
+            ? "💰 Lo encuentras más barato en otra cadena"
+            : "🏪 También en otras cadenas"}
+        </h2>
+        {matches.length === 0 ? (
+          <div className="mt-2 rounded-2xl bg-neutral-50 p-4 text-sm text-neutral-500">
+            No encontramos este producto en otra cadena (por ahora).
+          </div>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {cheaperMatch && (
+              <div className="rounded-2xl bg-yellow-50 px-4 py-3 ring-1 ring-yellow-200">
+                <div className="text-xs font-semibold uppercase tracking-wider text-yellow-900">
+                  🏆 Ahorras {formatCLP(cheaperAhorro)} comprando en {cheaperMatch.chainName}
+                </div>
+              </div>
+            )}
+            {matches.map((m) => (
+              <Link
+                key={m.id}
+                href={`/producto/${m.id}`}
+                className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-neutral-200"
+              >
+                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
+                  {m.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={m.imageUrl}
+                      alt={m.name}
+                      className="h-full w-full object-contain"
+                    />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="line-clamp-1 text-sm font-medium">{m.name}</div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-neutral-500">
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ background: m.chainColor }}
+                    />
+                    {m.chainName}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div
+                    className={`text-base font-bold ${
+                      m.price < p.price ? "text-emerald-700" : "text-neutral-700"
+                    }`}
+                  >
+                    {formatCLP(m.price)}
+                  </div>
+                  {m.price < p.price && (
+                    <div className="text-[10px] font-medium text-emerald-700">
+                      −{formatCLP(p.price - m.price)}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            ))}
+            <p className="px-1 pt-1 text-[11px] text-neutral-400">
+              Coincidencias por similitud de nombre. Algunas pueden no ser
+              exactamente el mismo producto.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* Historial */}
       {history.length > 1 && (
         <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-neutral-200">
           <h2 className="text-sm font-semibold">📈 Historial de precio</h2>
@@ -144,18 +230,18 @@ export default async function ProductPage({ params }: Props) {
 
       {!p.isOnlineOnly && (
         <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs text-amber-900 ring-1 ring-amber-200">
-          ⚠ Este es el <strong>precio web</strong>. El precio en tienda física puede
-          diferir.
+          ⚠ Este es el <strong>precio web</strong>. El precio en tienda física
+          puede diferir.
         </p>
       )}
 
-      {/* CTA */}
-      <div className="sticky bottom-20 mt-6 md:bottom-4">
+      {/* CTA externo */}
+      <div className="mt-6">
         <a
           href={externalHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="block rounded-2xl bg-emerald-600 px-5 py-4 text-center font-semibold text-white shadow-lg transition active:scale-[0.98] hover:bg-emerald-700"
+          className="flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 text-center font-semibold text-neutral-900 ring-1 ring-neutral-200 transition active:scale-[0.98]"
         >
           Ver en {p.chainName} →
         </a>
