@@ -1,5 +1,5 @@
 /**
- * Scraper de Jumbo (stack Cencosud).
+ * Scraper de Santa Isabel (Cencosud, misma estructura que Jumbo).
  */
 import { scrapeCencosud } from "./cencosud.js";
 import { prisma } from "../db.js";
@@ -7,6 +7,7 @@ import { prisma } from "../db.js";
 const CATEGORIES = [
   "despensa",
   "lacteos-y-quesos",
+  "lacteos",
   "frutas-y-verduras",
   "congelados",
   "limpieza",
@@ -20,8 +21,8 @@ async function main() {
 
   await scrapeCencosud(
     {
-      chainSlug: "jumbo",
-      baseUrl: "https://www.jumbo.cl",
+      chainSlug: "santa-isabel",
+      baseUrl: "https://www.santaisabel.cl",
       categories: CATEGORIES,
     },
     limit,

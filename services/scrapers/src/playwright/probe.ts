@@ -1,7 +1,5 @@
 /**
- * Diagnostic: para cada producto del primer card, extraer cada nodo
- * que contenga "$" y su class — para identificar la clase del precio
- * principal vs. el unitario.
+ * Probe Líder con Queue-It
  */
 import { chromium } from "playwright";
 
@@ -9,48 +7,73 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   const ctx = await browser.newContext({
     userAgent:
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
     viewport: { width: 1280, height: 800 },
     locale: "es-CL",
   });
   const page = await ctx.newPage();
   await page.addInitScript(`window.__name = (fn) => fn;`);
 
-  // Una página con packs (donde aparecen precios unitarios)
-  await page.goto("https://www.jumbo.cl/limpieza", { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await page.waitForSelector('[class*="product-card-name"]', { timeout: 30_000 });
-  await page.waitForTimeout(3000);
+  // Aceptar mucho tiempo de espera por Queue-It
+  const targetUrl = process.argv[2] ?? "https://www.santaisabel.cl/despensa";
+  console.log(`Navegando a ${targetUrl}...`);
+  const start = Date.now();
+  try {
+    const res = await page.goto(targetUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 120_000,
+    });
+    console.log(`HTTP ${res?.status()} en ${((Date.now() - start) / 1000).toFixed(1)}s`);
+    console.log(`Final URL: ${page.url()}`);
+    console.log(`Title: ${await page.title()}`);
 
-  const diag = await page.evaluate(() => {
-    const nameEls = document.querySelectorAll('[class*="product-card-name"]');
-    const out: any[] = [];
-    for (let i = 0; i < Math.min(3, nameEls.length); i++) {
-      const el = nameEls[i]!;
-      let a: HTMLElement | null = el as HTMLElement;
-      while (a && a.tagName !== "A") a = a.parentElement;
-      if (!a) continue;
-      const allEls = Array.from(a.querySelectorAll("*")) as HTMLElement[];
-      const priceNodes = allEls
-        .filter((e) => {
-          const t = e.textContent ?? "";
-          // Solo nodos hoja con texto que contiene $
-          return /\$/.test(t) && e.children.length === 0;
-        })
-        .map((e) => ({
-          text: (e.textContent ?? "").trim().substring(0, 40),
-          tag: e.tagName.toLowerCase(),
-          cls: (e.className || "").substring(0, 100),
-          parentCls: (e.parentElement?.className || "").substring(0, 100),
-        }));
-      out.push({
-        name: el.textContent?.trim().substring(0, 50),
-        prices: priceNodes,
-      });
+    // Wait a bit for content
+    await page.waitForTimeout(5000);
+    const finalUrl = page.url();
+    console.log(`After wait: ${finalUrl}`);
+
+    if (finalUrl.includes("queue-it")) {
+      console.log("⚠ Aún en queue-it, salimos");
+      await browser.close();
+      return;
     }
-    return out;
-  });
 
-  console.log(JSON.stringify(diag, null, 2));
+    // Save HTML for inspection
+    const html = await page.content();
+    const fs = await import("fs");
+    fs.writeFileSync("/tmp/lider-render.html", html);
+    console.log(`HTML size: ${html.length}`);
+
+    // Look for products
+    const selectors = await page.evaluate(() => {
+      const patterns: Record<string, number> = {};
+      for (const sel of [
+        'a[href*="/product/"]',
+        'a[href*="/sku/"]',
+        '[data-testid*="product"]',
+        '[class*="product-card"]',
+        '[class*="ProductCard"]',
+        '[class*="ProductPod"]',
+        '[class*="ItemList"]',
+      ]) {
+        const n = document.querySelectorAll(sel).length;
+        if (n) patterns[sel] = n;
+      }
+      // Show all <a href> patterns
+      const linkPatterns: Record<string, number> = {};
+      const links = Array.from(document.querySelectorAll("a[href]")) as HTMLAnchorElement[];
+      for (const a of links) {
+        const h = a.getAttribute("href") || "";
+        const prefix = h.split("/").slice(0, 3).join("/").substring(0, 50);
+        if (prefix.startsWith("/")) linkPatterns[prefix] = (linkPatterns[prefix] ?? 0) + 1;
+      }
+      return { patterns, topLinks: Object.entries(linkPatterns).sort(([, a], [, b]) => b - a).slice(0, 10) };
+    });
+    console.log("\nProduct selectors:", selectors.patterns);
+    console.log("Top link prefixes:", selectors.topLinks);
+  } catch (e) {
+    console.error("Error:", (e as Error).message);
+  }
   await browser.close();
 }
 

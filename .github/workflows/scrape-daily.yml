@@ -5,7 +5,7 @@ on:
   # Lo dejamos a las 3 AM local para no chocar con el horario peak de los sitios.
   schedule:
     - cron: "0 6 * * *"
-  # También permite ejecución manual desde la UI de GitHub
+  # Permite ejecución manual desde la UI de GitHub
   workflow_dispatch:
     inputs:
       chains:
@@ -28,18 +28,36 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - run: pnpm install --frozen-lockfile
-
       - name: Install Playwright + Chromium
         run: pnpm --filter @baraticimo/scrapers exec playwright install --with-deps chromium
-
       - name: Generate Prisma client
         run: pnpm exec prisma generate --schema infra/prisma/schema.prisma
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
       - name: Scrape Jumbo
         run: pnpm --filter @baraticimo/scrapers scrape:jumbo -- --limit=${{ inputs.limit || '50' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  santa-isabel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name == 'schedule' || inputs.chains == '' || contains(inputs.chains, 'santa-isabel') }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright + Chromium
+        run: pnpm --filter @baraticimo/scrapers exec playwright install --with-deps chromium
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate --schema infra/prisma/schema.prisma
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Scrape Santa Isabel
+        run: pnpm --filter @baraticimo/scrapers scrape:santa-isabel -- --limit=${{ inputs.limit || '50' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
