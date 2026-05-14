@@ -5,6 +5,7 @@
  */
 import { chromium, type Page } from "playwright";
 import { prisma } from "../db.js";
+import { batchMatchProducts } from "../ai/deepseek.js";
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
@@ -203,5 +204,130 @@ export async function scrapeCencosud(config: CencosudConfig, limit: number) {
 
   console.log(`✓ ${config.chainSlug}: ${total} productos persistidos`);
   await browser.close();
+
+  // ─── Batch cross-chain matching (post-scrape) ──────────────────────────────
+  // Busca ChainProducts sin match canónico y los empareja en batches de 150.
+  await runBatchMatcher(config.chainSlug);
+
   return total;
+}
+
+const BATCH_SIZE = 150;
+
+async function runBatchMatcher(chainSlug: string) {
+  try {
+    // ChainProducts de esta cadena sin productId canónico
+    const unmatched = await prisma.chainProduct.findMany({
+      where: {
+        chain: { slug: chainSlug },
+        productId: null,
+      },
+      select: { id: true, name: true, brand: true, format: true },
+      take: 500,
+    });
+
+    if (unmatched.length === 0) {
+      console.log(`  matching: 0 productos sin match — nada que hacer`);
+      return;
+    }
+
+    console.log(`  matching: ${unmatched.length} productos sin match canónico`);
+
+    // Para cada unmatched, busca candidatos heurísticos en otras cadenas
+    const pairs: {
+      idx: number;
+      cpId: string;
+      a: { name: string; brand: string | null; format: string | null };
+      candidates: { id: string; name: string; brand: string | null; format: string | null }[];
+    }[] = [];
+
+    for (let i = 0; i < unmatched.length; i++) {
+      const cp = unmatched[i]!;
+      const words = cp.name
+        .toLowerCase()
+        .replace(/[^\wáéíóúñ\s]/gi, " ")
+        .split(/\s+/)
+        .filter((w) => w.length >= 4)
+        .sort((a, b) => b.length - a.length)
+        .slice(0, 3);
+
+      if (words.length < 2) continue;
+
+      const candidates = await prisma.chainProduct.findMany({
+        where: {
+          chain: { slug: { not: chainSlug } },
+          AND: words.map((w) => ({ name: { contains: w, mode: "insensitive" as const } })),
+        },
+        select: { id: true, name: true, brand: true, format: true },
+        take: 4,
+      });
+
+      if (candidates.length > 0) {
+        pairs.push({
+          idx: i,
+          cpId: cp.id,
+          a: { name: cp.name, brand: cp.brand, format: cp.format },
+          candidates,
+        });
+      }
+    }
+
+    if (pairs.length === 0) {
+      console.log(`  matching: sin candidatos encontrados`);
+      return;
+    }
+
+    // Procesar en batches de 150
+    let matched = 0;
+    for (let start = 0; start < pairs.length; start += BATCH_SIZE) {
+      const batch = pairs.slice(start, start + BATCH_SIZE).map((p, localIdx) => ({
+        idx: localIdx,
+        a: p.a,
+        candidates: p.candidates,
+      }));
+
+      const results = await batchMatchProducts(batch);
+
+      for (const [localIdx, match] of results) {
+        const pair = pairs[start + localIdx];
+        if (!pair) continue;
+
+        // Asegura que exista un Product canónico con ese ID
+        const targetCp = await prisma.chainProduct.findUnique({
+          where: { id: match.productId },
+          select: { productId: true, name: true, brand: true, format: true, imageUrl: true },
+        });
+        if (!targetCp) continue;
+
+        let canonicalId = targetCp.productId;
+        if (!canonicalId) {
+          // Crear nuevo producto canónico desde el target
+          const newProduct = await prisma.product.create({
+            data: {
+              name: targetCp.name,
+              brand: targetCp.brand,
+              format: targetCp.format,
+              imageUrl: targetCp.imageUrl,
+            },
+          });
+          canonicalId = newProduct.id;
+          await prisma.chainProduct.update({
+            where: { id: match.productId },
+            data: { productId: canonicalId, matchConfidence: 1.0 },
+          });
+        }
+
+        // Vincular el unmatched al mismo producto canónico
+        await prisma.chainProduct.update({
+          where: { id: pair.cpId },
+          data: { productId: canonicalId, matchConfidence: match.confidence },
+        });
+        matched++;
+      }
+    }
+
+    console.log(`  matching: ${matched}/${pairs.length} productos emparejados`);
+  } catch (err) {
+    console.warn(`  matching falló (no crítico):`, (err as Error).message);
+  }
 }

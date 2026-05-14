@@ -77,6 +77,56 @@ Extrae los datos del producto desde el HTML y responde SOLO con JSON valido con 
   return ParsedProductSchema.parse(JSON.parse(raw));
 }
 
+// ─── Batch matcher (usa el context window de 178k) ──────────────────────────
+
+interface BatchPair {
+  idx: number;
+  a: { name: string; brand: string | null; format: string | null };
+  candidates: { id: string; name: string; brand: string | null; format: string | null }[];
+}
+
+interface BatchResult {
+  idx: number;
+  matchId: string | null;
+  confidence: number;
+}
+
+const BATCH_SYSTEM = `Eres un sistema de matching de productos de supermercado. Recibes una lista de pares (producto fuente + candidatos) y decides cuál candidato corresponde al mismo SKU real (misma marca, mismo formato, mismo tipo). Ignora diferencias ortográficas menores ("Coca-Cola" vs "Coca Cola", "1,5L" vs "1.5L"). Si ningún candidato coincide con confianza ≥0.82, usa null.
+
+Responde SOLO con JSON válido:
+{"matches":[{"idx":0,"matchId":"id_o_null","confidence":0.0},...]}`
+
+/**
+ * Matcher en batch: procesa hasta 150 pares en una sola llamada.
+ * Mucho más eficiente que matchProduct() individual para runs nocturnos.
+ */
+export async function batchMatchProducts(
+  pairs: BatchPair[],
+): Promise<Map<number, { productId: string; confidence: number }>> {
+  if (pairs.length === 0) return new Map();
+
+  const raw = await callDeepSeek(BATCH_SYSTEM, JSON.stringify(pairs));
+  const parsed = z
+    .object({
+      matches: z.array(
+        z.object({
+          idx: z.number(),
+          matchId: z.string().nullable(),
+          confidence: z.number().min(0).max(1),
+        }),
+      ),
+    })
+    .parse(JSON.parse(raw));
+
+  const result = new Map<number, { productId: string; confidence: number }>();
+  for (const m of parsed.matches) {
+    if (m.matchId && m.confidence >= 0.82) {
+      result.set(m.idx, { productId: m.matchId, confidence: m.confidence });
+    }
+  }
+  return result;
+}
+
 /**
  * Matcher: dados un chain_product (nombre/marca/formato) y un set de
  * productos canonicos candidatos, decide cual hace match.

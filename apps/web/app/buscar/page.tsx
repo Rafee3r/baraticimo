@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { searchProducts } from "../../lib/queries";
+import { smartSearch } from "../../lib/ai-search";
 import { SearchInput } from "../../components/SearchInput";
 import { ProductCard } from "../../components/ProductCard";
 
@@ -14,7 +15,9 @@ export default async function SearchPage({ searchParams }: Props) {
   const inStoreOnly = tienda === "1";
   const onlyOffers = ofertas === "1";
   let results = q.trim()
-    ? await searchProducts(q, { limit: 80, inStoreOnly })
+    ? await smartSearch(q, { limit: 80, inStoreOnly }).catch(() =>
+        searchProducts(q, { limit: 80, inStoreOnly }),
+      )
     : [];
   if (onlyOffers) results = results.filter((r) => r.isOnSale);
 

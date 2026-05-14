@@ -191,6 +191,30 @@ export async function getCrossChainMatches(
     .sort((a, b) => a.price - b.price);
 }
 
+/** Búsqueda por múltiples keywords con OR — usada por smartSearch. */
+export async function searchProductsByKeywords(
+  keywords: string[],
+  opts: { limit?: number; inStoreOnly?: boolean } = {},
+): Promise<ProductRow[]> {
+  if (keywords.length === 0) return [];
+  const cps = await prisma.chainProduct.findMany({
+    where: {
+      OR: keywords.flatMap((k) => [
+        { name: { contains: k, mode: "insensitive" as const } },
+        { brand: { contains: k, mode: "insensitive" as const } },
+      ]),
+      ...(opts.inStoreOnly ? { isOnlineOnly: false } : {}),
+    },
+    include: {
+      chain: true,
+      prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
+    },
+    take: opts.limit ?? 80,
+    orderBy: { lastSeenAt: "desc" },
+  });
+  return cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
+}
+
 /** Las 8 categorías de la home en formato (categoría → 6 productos top). */
 export async function getOffersByKeyword(keyword: string, limit = 8): Promise<ProductRow[]> {
   const cps = await prisma.chainProduct.findMany({

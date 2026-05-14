@@ -19,6 +19,7 @@ interface SubtotalByChain {
 export function ListPageClient() {
   const { list, setQty, removeFromList, clearList, hydrated } = useList();
   const [products, setProducts] = useState<ProductRow[] | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -33,7 +34,21 @@ export function ListPageClient() {
       body: JSON.stringify({ ids }),
     })
       .then((r) => r.json())
-      .then((data) => setProducts(data.products))
+      .then((data) => {
+        setProducts(data.products);
+        // Pedir tip de ahorro si la lista tiene 3+ productos
+        if (list.length >= 3) {
+          const items = list.map((e) => ({ id: e.id, qty: e.qty }));
+          fetch("/api/lista-tip", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items }),
+          })
+            .then((r) => r.json())
+            .then((d) => setTip(d.tip ?? null))
+            .catch(() => {});
+        }
+      })
       .catch(() => setProducts([]));
   }, [hydrated, list.length]); // re-fetch when item is added/removed (length changes)
 
@@ -124,6 +139,11 @@ export function ListPageClient() {
             {list.reduce((s, e) => s + e.qty, 0)} productos · {subtotals.length} cadena
             {subtotals.length > 1 ? "s" : ""}
           </p>
+          {tip && (
+            <div className="mt-4 rounded-2xl bg-yellow-300/90 px-3 py-2.5 text-sm font-medium text-yellow-900">
+              💡 {tip}
+            </div>
+          )}
           {subtotals.length > 1 && (
             <div className="mt-4 space-y-2">
               {subtotals.map((s, i) => (
