@@ -6,6 +6,7 @@
   "scripts": {
     "scrape:jumbo": "tsx src/playwright/jumbo.ts",
     "scrape:santa-isabel": "tsx src/playwright/santa-isabel.ts",
+    "scrape:tottus": "tsx src/playwright/tottus.ts",
     "probe": "tsx src/playwright/probe.ts",
     "typecheck": "tsc --noEmit"
   },

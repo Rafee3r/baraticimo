@@ -11,13 +11,17 @@ import { ProductCard } from "../components/ProductCard";
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [topDeals, stats, lacteos, despensa, limpieza] = await Promise.all([
-    getFeaturedProducts(10),
-    getStats(),
-    getOffersByKeyword("leche", 8),
-    getOffersByKeyword("arroz", 8),
-    getOffersByKeyword("detergente", 8),
-  ]);
+  const [topDeals, stats, lacteos, despensa, bebidas, snacks, limpieza, mascotas] =
+    await Promise.all([
+      getFeaturedProducts(10),
+      getStats(),
+      getOffersByKeyword("leche", 8),
+      getOffersByKeyword("arroz", 8),
+      getOffersByKeyword("bebida", 8),
+      getOffersByKeyword("snack", 8),
+      getOffersByKeyword("detergente", 8),
+      getOffersByKeyword("mascota", 8),
+    ]);
 
   return (
     <main className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 sm:pt-6">
@@ -57,11 +61,32 @@ export default async function HomePage() {
         products={despensa}
       />
 
+      {/* Bebidas */}
+      <SectionRow
+        title="🥤 Bebidas"
+        link="/buscar?q=bebida"
+        products={bebidas}
+      />
+
+      {/* Snacks */}
+      <SectionRow
+        title="🍿 Snacks y dulces"
+        link="/buscar?q=snack"
+        products={snacks}
+      />
+
       {/* Limpieza */}
       <SectionRow
         title="🧴 Limpieza"
         link="/buscar?q=detergente"
         products={limpieza}
+      />
+
+      {/* Mascotas */}
+      <SectionRow
+        title="🐾 Mascotas"
+        link="/buscar?q=mascota"
+        products={mascotas}
       />
 
       {/* Cómo funciona */}

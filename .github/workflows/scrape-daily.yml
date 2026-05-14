@@ -39,6 +39,7 @@ jobs:
         run: pnpm --filter @baraticimo/scrapers scrape:jumbo -- --limit=${{ inputs.limit || '50' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
   santa-isabel:
     runs-on: ubuntu-latest
@@ -61,3 +62,27 @@ jobs:
         run: pnpm --filter @baraticimo/scrapers scrape:santa-isabel -- --limit=${{ inputs.limit || '50' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+
+  tottus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name == 'schedule' || inputs.chains == '' || contains(inputs.chains, 'tottus') }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright + Chromium
+        run: pnpm --filter @baraticimo/scrapers exec playwright install --with-deps chromium
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate --schema infra/prisma/schema.prisma
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Scrape Tottus
+        run: pnpm --filter @baraticimo/scrapers scrape:tottus -- --limit=${{ inputs.limit || '50' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}

@@ -5,13 +5,25 @@ import { scrapeCencosud } from "./cencosud.js";
 import { prisma } from "../db.js";
 
 const CATEGORIES = [
+  // Alimentación básica
   "despensa",
   "lacteos-y-quesos",
   "frutas-y-verduras",
+  "carnes-y-aves",
+  "cecinas",
+  "pescados-y-mariscos",
+  "panaderia-y-pasteleria",
+  // Bebidas
+  "bebidas",
+  // Otras comidas
   "congelados",
+  "snacks-dulces-y-chocolates",
+  "desayuno-y-cereales",
+  // Hogar
   "limpieza",
   "belleza-y-cuidado-personal",
   "mascotas",
+  "bebes",
 ];
 
 async function main() {
