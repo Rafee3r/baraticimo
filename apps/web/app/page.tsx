@@ -1,183 +1,122 @@
 import Link from "next/link";
 import { getFeaturedProducts, getStats } from "../lib/queries";
+import { SearchInput } from "../components/SearchInput";
+import { CategoryRow } from "../components/CategoryRow";
+import { ProductCard } from "../components/ProductCard";
 
-export const revalidate = 300; // re-render cada 5 min para reflejar nuevos scrapes
-
-const CHAINS = [
-  { slug: "jumbo", name: "Jumbo", kind: "Supermercado", color: "#00873A" },
-  { slug: "lider", name: "Líder", kind: "Supermercado", color: "#0071CE" },
-  { slug: "santa-isabel", name: "Santa Isabel", kind: "Supermercado", color: "#E60028" },
-  { slug: "tottus", name: "Tottus", kind: "Supermercado", color: "#FFB81C" },
-  { slug: "unimarc", name: "Unimarc", kind: "Supermercado", color: "#003DA5" },
-  { slug: "cruz-verde", name: "Cruz Verde", kind: "Farmacia", color: "#00A651" },
-  { slug: "salcobrand", name: "Salcobrand", kind: "Farmacia", color: "#005DAA" },
-  { slug: "ahumada", name: "Ahumada", kind: "Farmacia", color: "#E4002B" },
-];
-
-function formatCLP(n: number) {
-  return `$${n.toLocaleString("es-CL")}`;
-}
+export const revalidate = 300;
 
 export default async function HomePage() {
-  const [featured, stats] = await Promise.all([
-    getFeaturedProducts(12),
+  const [deals, stats] = await Promise.all([
+    getFeaturedProducts(10),
     getStats(),
   ]);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
-      <section className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Compara precios y ahorra en tu compra
+    <main className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 sm:pt-8">
+      {/* Hero */}
+      <section className="rounded-3xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white shadow-lg sm:p-10">
+        <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+          Compara y ahorra
         </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-lg text-neutral-600">
-          Encuentra el supermercado o farmacia más barato para tus productos
-          favoritos. Precios actualizados a diario en todo Chile.
+        <p className="mt-2 text-sm text-emerald-50 sm:text-base">
+          {stats.productCount.toLocaleString("es-CL")} productos · {stats.saleCount}{" "}
+          en oferta hoy
         </p>
+        <div className="mt-5">
+          <SearchInput size="lg" />
+        </div>
+      </section>
 
-        <form action="/buscar" className="mx-auto mt-8 flex max-w-xl gap-2">
-          <input
-            name="q"
-            type="search"
-            placeholder="Ej: leche, detergente, pañales..."
-            className="flex-1 rounded-lg border border-neutral-300 bg-white px-4 py-3 text-base shadow-sm focus:border-neutral-900 focus:outline-none"
-          />
-          <button
-            type="submit"
-            className="rounded-lg bg-emerald-600 px-6 py-3 font-medium text-white hover:bg-emerald-700"
+      {/* Categorías */}
+      <section className="mt-6 sm:mt-8">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
+          Explorar
+        </h2>
+        <CategoryRow />
+      </section>
+
+      {/* Ofertas */}
+      <section className="mt-8">
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-xl font-bold sm:text-2xl">🔥 Ofertas hoy</h2>
+          <Link
+            href="/buscar"
+            className="text-sm font-medium text-emerald-600 hover:underline"
           >
-            Buscar
-          </button>
-        </form>
-
-        <p className="mt-4 text-sm text-neutral-500">
-          Prueba:
-          {["leche", "detergente", "pañales", "café"].map((q) => (
-            <Link
-              key={q}
-              href={`/buscar?q=${encodeURIComponent(q)}`}
-              className="ml-2 underline hover:text-neutral-900"
-            >
-              {q}
-            </Link>
-          ))}
-        </p>
-
-        {stats.productCount > 0 && (
-          <p className="mt-6 text-sm text-neutral-500">
-            <span className="font-medium text-neutral-900">
-              {stats.productCount.toLocaleString("es-CL")}
-            </span>{" "}
-            productos · <span className="font-medium text-emerald-700">
-              {stats.saleCount}
-            </span>{" "}
-            en oferta hoy
+            Ver todas →
+          </Link>
+        </div>
+        {deals.length === 0 ? (
+          <p className="rounded-2xl bg-neutral-100 p-6 text-center text-sm text-neutral-500">
+            Aún no hay ofertas cargadas hoy.
           </p>
+        ) : (
+          <>
+            {/* Mobile: horizontal scroll carousel */}
+            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 no-scrollbar sm:hidden">
+              {deals.map((p) => (
+                <div key={p.id} className="w-40 shrink-0">
+                  <ProductCard product={p} variant="grid" />
+                </div>
+              ))}
+            </div>
+            {/* Desktop: grid */}
+            <div className="hidden grid-cols-2 gap-3 sm:grid sm:grid-cols-4 lg:grid-cols-5">
+              {deals.map((p) => (
+                <ProductCard key={p.id} product={p} variant="grid" />
+              ))}
+            </div>
+          </>
         )}
       </section>
 
-      <section className="mt-16">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-          Cadenas comparadas
+      {/* Cadenas */}
+      <section className="mt-10">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
+          Cadenas
         </h2>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-          {CHAINS.map((c) => (
+        <div className="flex flex-wrap gap-2">
+          {[
+            { name: "Jumbo", color: "#00873A", kind: "Super" },
+            { name: "Santa Isabel", color: "#E60028", kind: "Super" },
+            { name: "Líder", color: "#0071CE", kind: "Super", soon: true },
+            { name: "Tottus", color: "#FFB81C", kind: "Super", soon: true },
+            { name: "Unimarc", color: "#003DA5", kind: "Super", soon: true },
+            { name: "Cruz Verde", color: "#00A651", kind: "Farma", soon: true },
+            { name: "Salcobrand", color: "#005DAA", kind: "Farma", soon: true },
+            { name: "Ahumada", color: "#E4002B", kind: "Farma", soon: true },
+          ].map((c) => (
             <div
-              key={c.slug}
-              className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2"
+              key={c.name}
+              className={`flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm ring-1 ${
+                c.soon ? "text-neutral-400 ring-neutral-200" : "ring-neutral-300"
+              }`}
             >
-              <div
-                className="h-3 w-3 shrink-0 rounded-full"
-                style={{ background: c.color }}
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ background: c.color, opacity: c.soon ? 0.5 : 1 }}
               />
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium">{c.name}</div>
-                <div className="text-xs text-neutral-500">{c.kind}</div>
-              </div>
+              {c.name}
+              {c.soon && (
+                <span className="text-[10px] uppercase tracking-wider text-neutral-400">
+                  pronto
+                </span>
+              )}
             </div>
           ))}
         </div>
       </section>
 
-      <section className="mt-12">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-xl font-semibold">🔥 Mejores ofertas hoy</h2>
-          <Link href="/buscar" className="text-sm text-neutral-500 hover:underline">
-            Ver todos
-          </Link>
-        </div>
-        {featured.length === 0 ? (
-          <p className="mt-4 text-sm text-neutral-500">
-            Aún no hay ofertas cargadas. El scraper corre cada noche a las 3 AM.
-          </p>
-        ) : (
-          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((p) => (
-              <li key={p.id}>
-                <Link
-                  href={`/producto/${p.id}`}
-                  className="flex h-full gap-3 rounded-lg border border-neutral-200 bg-white p-4 hover:border-neutral-900"
-                >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neutral-100">
-                    {p.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imageUrl} alt={p.name} className="h-full w-full object-contain" />
-                    ) : (
-                      <span className="text-2xl">🛒</span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="line-clamp-2 text-sm font-medium">{p.name}</div>
-                    <div className="mt-1 flex items-center gap-1.5 text-xs">
-                      <span
-                        className="h-2 w-2 rounded-full"
-                        style={{ background: p.chainColor }}
-                      />
-                      <span className="text-neutral-500">{p.chainName}</span>
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-lg font-bold text-emerald-600">
-                        {formatCLP(p.price)}
-                      </span>
-                      {p.listPrice && (
-                        <span className="text-xs text-neutral-400 line-through">
-                          {formatCLP(p.listPrice)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {p.ahorroPct && (
-                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                          −{p.ahorroPct}%
-                        </span>
-                      )}
-                      {p.isOnlineOnly && (
-                        <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
-                          💻 Solo online
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <footer className="mt-20 space-y-2 border-t border-neutral-200 pt-6 text-center text-xs text-neutral-500">
-        <p>
-          Datos actualizados a diario desde los sitios oficiales de cada cadena.
-        </p>
-        <p>
-          <strong className="text-neutral-700">Precios web</strong> — los precios en tienda física
-          pueden diferir. Los productos marcados{" "}
-          <span className="rounded-full bg-sky-50 px-2 py-0.5 font-medium text-sky-700">
-            💻 Solo online
-          </span>{" "}
-          no están disponibles para compra en tienda.
-        </p>
-      </footer>
+      {/* Footer disclaimer */}
+      <p className="mt-8 rounded-2xl bg-amber-50 px-4 py-3 text-xs text-amber-900 ring-1 ring-amber-200">
+        <strong>Importante:</strong> Mostramos los precios de los sitios web. En
+        tienda física pueden ser distintos. Los productos marcados{" "}
+        <span className="rounded-full bg-sky-100 px-1.5 py-0.5 font-medium text-sky-700">
+          💻 online
+        </span>{" "}
+        no están disponibles en sucursal.
+      </p>
     </main>
   );
 }
