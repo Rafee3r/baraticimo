@@ -34,6 +34,7 @@ interface ExtractedProduct {
   listPrice: number | null;
   isOnSale: boolean;
   imageUrl: string | null;
+  isOnlineOnly: boolean;
 }
 
 async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
@@ -113,12 +114,24 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
 
       const img = a.querySelector("img")?.getAttribute("src") ?? null;
 
+      // Detectar pill "Exclusivo online" dentro del card
+      let isOnlineOnly = false;
+      const pills = a.querySelectorAll("p, span");
+      for (const pill of Array.from(pills)) {
+        const txt = (pill.textContent ?? "").trim();
+        if (txt === "Exclusivo online") {
+          isOnlineOnly = true;
+          break;
+        }
+      }
+
       seen.add(href);
       // externalId = slug sin "/" y sin "/p"
       const externalId = href.replace(/^\//, "").replace(/\/p\/?$/, "");
       out.push({
         externalId,
         url: href,
+        isOnlineOnly,
         name,
         price,
         listPrice: listPrice && listPrice > price ? listPrice : null,
@@ -170,8 +183,15 @@ async function persistProducts(products: ExtractedProduct[]) {
         name: p.name,
         url: productUrl,
         imageUrl: p.imageUrl,
+        isOnlineOnly: p.isOnlineOnly,
       },
-      update: { name: p.name, url: productUrl, imageUrl: p.imageUrl, lastSeenAt: new Date() },
+      update: {
+        name: p.name,
+        url: productUrl,
+        imageUrl: p.imageUrl,
+        isOnlineOnly: p.isOnlineOnly,
+        lastSeenAt: new Date(),
+      },
     });
     await prisma.price.create({
       data: {

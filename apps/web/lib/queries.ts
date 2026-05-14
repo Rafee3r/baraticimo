@@ -14,6 +14,7 @@ export interface ProductRow {
   price: number;
   listPrice: number | null;
   isOnSale: boolean;
+  isOnlineOnly: boolean;
   scrapedAt: string;
   ahorro: number | null;
   ahorroPct: number | null;
@@ -51,6 +52,7 @@ function rowFromChainProduct(cp: any): ProductRow | null {
     price,
     listPrice,
     isOnSale: latest.isOnSale,
+    isOnlineOnly: cp.isOnlineOnly,
     scrapedAt: latest.scrapedAt.toISOString(),
     ahorro,
     ahorroPct,
@@ -77,7 +79,10 @@ export async function getFeaturedProducts(limit = 12): Promise<ProductRow[]> {
 }
 
 /** Búsqueda case-insensitive en el nombre + marca. */
-export async function searchProducts(query: string, limit = 30): Promise<ProductRow[]> {
+export async function searchProducts(
+  query: string,
+  opts: { limit?: number; inStoreOnly?: boolean } = {},
+): Promise<ProductRow[]> {
   const q = query.trim();
   if (!q) return [];
   const cps = await prisma.chainProduct.findMany({
@@ -86,12 +91,13 @@ export async function searchProducts(query: string, limit = 30): Promise<Product
         { name: { contains: q, mode: "insensitive" } },
         { brand: { contains: q, mode: "insensitive" } },
       ],
+      ...(opts.inStoreOnly ? { isOnlineOnly: false } : {}),
     },
     include: {
       chain: true,
       prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
     },
-    take: limit,
+    take: opts.limit ?? 30,
     orderBy: { lastSeenAt: "desc" },
   });
   return cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
@@ -122,10 +128,11 @@ export async function getProductDetail(id: string) {
 
 /** Total de productos para mostrar en la UI. */
 export async function getStats() {
-  const [productCount, priceCount, saleCount] = await Promise.all([
+  const [productCount, priceCount, saleCount, onlineOnlyCount] = await Promise.all([
     prisma.chainProduct.count(),
     prisma.price.count(),
     prisma.price.count({ where: { isOnSale: true } }),
+    prisma.chainProduct.count({ where: { isOnlineOnly: true } }),
   ]);
-  return { productCount, priceCount, saleCount };
+  return { productCount, priceCount, saleCount, onlineOnlyCount };
 }

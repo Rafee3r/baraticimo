@@ -145,11 +145,18 @@ export default async function HomePage() {
                         </span>
                       )}
                     </div>
-                    {p.ahorroPct && (
-                      <div className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                        −{p.ahorroPct}% (ahorras {formatCLP(p.ahorro ?? 0)})
-                      </div>
-                    )}
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {p.ahorroPct && (
+                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                          −{p.ahorroPct}%
+                        </span>
+                      )}
+                      {p.isOnlineOnly && (
+                        <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                          💻 Solo online
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </Link>
               </li>
@@ -158,8 +165,18 @@ export default async function HomePage() {
         )}
       </section>
 
-      <footer className="mt-20 border-t border-neutral-200 pt-6 text-center text-xs text-neutral-500">
-        Datos actualizados a diario desde los sitios oficiales de cada cadena
+      <footer className="mt-20 space-y-2 border-t border-neutral-200 pt-6 text-center text-xs text-neutral-500">
+        <p>
+          Datos actualizados a diario desde los sitios oficiales de cada cadena.
+        </p>
+        <p>
+          <strong className="text-neutral-700">Precios web</strong> — los precios en tienda física
+          pueden diferir. Los productos marcados{" "}
+          <span className="rounded-full bg-sky-50 px-2 py-0.5 font-medium text-sky-700">
+            💻 Solo online
+          </span>{" "}
+          no están disponibles para compra en tienda.
+        </p>
       </footer>
     </main>
   );

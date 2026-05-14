@@ -58,8 +58,21 @@ export default async function ProductPage({ params }: Props) {
           {p.brand && (
             <div className="mt-1 text-sm text-neutral-600">{p.brand}</div>
           )}
+          {p.isOnlineOnly && (
+            <div className="mt-3 inline-block rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
+              💻 Solo online — no disponible en tienda física
+            </div>
+          )}
         </div>
       </div>
+
+      {!p.isOnlineOnly && (
+        <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <strong>⚠ Precio web.</strong> Este precio viene del sitio de{" "}
+          {p.chainName}; el precio en tienda física puede diferir. Te
+          recomendamos verificar en sucursal antes de comprar.
+        </p>
+      )}
 
       <section className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5">
         <div className="text-xs font-semibold uppercase tracking-wider text-emerald-700">

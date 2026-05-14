@@ -84,6 +84,8 @@ model ChainProduct {
   format     String?
   imageUrl   String?
   url        String
+  // true cuando el sitio marca el producto como "Exclusivo online" (no en tienda fisica)
+  isOnlineOnly Boolean @default(false)
   // Confianza del match IA (0-1); null si aun no se intento matchear
   matchConfidence Float?
   needsReview     Boolean  @default(false)

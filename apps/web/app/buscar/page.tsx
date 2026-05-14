@@ -4,7 +4,7 @@ import { searchProducts } from "../../lib/queries";
 export const revalidate = 120;
 
 interface Props {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; tienda?: string }>;
 }
 
 function formatCLP(n: number) {
@@ -12,25 +12,42 @@ function formatCLP(n: number) {
 }
 
 export default async function SearchPage({ searchParams }: Props) {
-  const { q = "" } = await searchParams;
-  const results = q.trim() ? await searchProducts(q, 50) : [];
+  const { q = "", tienda } = await searchParams;
+  const inStoreOnly = tienda === "1";
+  const results = q.trim()
+    ? await searchProducts(q, { limit: 50, inStoreOnly })
+    : [];
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
-      <form action="/buscar" className="flex gap-2">
-        <input
-          name="q"
-          type="search"
-          defaultValue={q}
-          placeholder="Buscar producto..."
-          className="flex-1 rounded-lg border border-neutral-300 bg-white px-4 py-3 shadow-sm focus:border-neutral-900 focus:outline-none"
-        />
-        <button
-          type="submit"
-          className="rounded-lg bg-emerald-600 px-6 py-3 font-medium text-white hover:bg-emerald-700"
-        >
-          Buscar
-        </button>
+      <form action="/buscar" className="space-y-3">
+        <div className="flex gap-2">
+          <input
+            name="q"
+            type="search"
+            defaultValue={q}
+            placeholder="Buscar producto..."
+            className="flex-1 rounded-lg border border-neutral-300 bg-white px-4 py-3 shadow-sm focus:border-neutral-900 focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded-lg bg-emerald-600 px-6 py-3 font-medium text-white hover:bg-emerald-700"
+          >
+            Buscar
+          </button>
+        </div>
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-neutral-600">
+          <input
+            type="checkbox"
+            name="tienda"
+            value="1"
+            defaultChecked={inStoreOnly}
+            className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+          />
+          <span>
+            Solo productos <strong>disponibles en tienda física</strong> (excluir "Solo online")
+          </span>
+        </label>
       </form>
 
       <div className="mt-6">
@@ -85,6 +102,11 @@ export default async function SearchPage({ searchParams }: Props) {
                     {p.chainName}
                     {p.brand && <span> · {p.brand}</span>}
                   </div>
+                  {p.isOnlineOnly && (
+                    <div className="mt-1 inline-block rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                      💻 Solo online
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
                   <div className="text-xl font-bold text-emerald-600">
