@@ -1,16 +1,28 @@
 import Link from "next/link";
-import { CHAINS, PRODUCTS, formatCLP, getChain } from "../lib/mock-data";
+import { getFeaturedProducts, getStats } from "../lib/queries";
 
-function cheapest(p: (typeof PRODUCTS)[number]) {
-  return p.prices.reduce((min, cur) => (cur.price < min.price ? cur : min));
+export const revalidate = 300; // re-render cada 5 min para reflejar nuevos scrapes
+
+const CHAINS = [
+  { slug: "jumbo", name: "Jumbo", kind: "Supermercado", color: "#00873A" },
+  { slug: "lider", name: "Líder", kind: "Supermercado", color: "#0071CE" },
+  { slug: "santa-isabel", name: "Santa Isabel", kind: "Supermercado", color: "#E60028" },
+  { slug: "tottus", name: "Tottus", kind: "Supermercado", color: "#FFB81C" },
+  { slug: "unimarc", name: "Unimarc", kind: "Supermercado", color: "#003DA5" },
+  { slug: "cruz-verde", name: "Cruz Verde", kind: "Farmacia", color: "#00A651" },
+  { slug: "salcobrand", name: "Salcobrand", kind: "Farmacia", color: "#005DAA" },
+  { slug: "ahumada", name: "Ahumada", kind: "Farmacia", color: "#E4002B" },
+];
+
+function formatCLP(n: number) {
+  return `$${n.toLocaleString("es-CL")}`;
 }
 
-function mostExpensive(p: (typeof PRODUCTS)[number]) {
-  return p.prices.reduce((max, cur) => (cur.price > max.price ? cur : max));
-}
-
-export default function HomePage() {
-  const featured = PRODUCTS.slice(0, 6);
+export default async function HomePage() {
+  const [featured, stats] = await Promise.all([
+    getFeaturedProducts(12),
+    getStats(),
+  ]);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
@@ -27,7 +39,7 @@ export default function HomePage() {
           <input
             name="q"
             type="search"
-            placeholder="Ej: coca cola, paracetamol, pañales..."
+            placeholder="Ej: leche, detergente, pañales..."
             className="flex-1 rounded-lg border border-neutral-300 bg-white px-4 py-3 text-base shadow-sm focus:border-neutral-900 focus:outline-none"
           />
           <button
@@ -40,7 +52,7 @@ export default function HomePage() {
 
         <p className="mt-4 text-sm text-neutral-500">
           Prueba:
-          {["coca cola", "leche", "paracetamol", "pañales"].map((q) => (
+          {["leche", "detergente", "pañales", "café"].map((q) => (
             <Link
               key={q}
               href={`/buscar?q=${encodeURIComponent(q)}`}
@@ -50,6 +62,18 @@ export default function HomePage() {
             </Link>
           ))}
         </p>
+
+        {stats.productCount > 0 && (
+          <p className="mt-6 text-sm text-neutral-500">
+            <span className="font-medium text-neutral-900">
+              {stats.productCount.toLocaleString("es-CL")}
+            </span>{" "}
+            productos · <span className="font-medium text-emerald-700">
+              {stats.saleCount}
+            </span>{" "}
+            en oferta hoy
+          </p>
+        )}
       </section>
 
       <section className="mt-16">
@@ -77,50 +101,65 @@ export default function HomePage() {
 
       <section className="mt-12">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-xl font-semibold">Productos populares</h2>
-          <Link href="/buscar?q=" className="text-sm text-neutral-500 hover:underline">
+          <h2 className="text-xl font-semibold">🔥 Mejores ofertas hoy</h2>
+          <Link href="/buscar" className="text-sm text-neutral-500 hover:underline">
             Ver todos
           </Link>
         </div>
-        <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((p) => {
-            const min = cheapest(p);
-            const max = mostExpensive(p);
-            const minChain = getChain(min.chainSlug)!;
-            const ahorro = max.price - min.price;
-            return (
+        {featured.length === 0 ? (
+          <p className="mt-4 text-sm text-neutral-500">
+            Aún no hay ofertas cargadas. El scraper corre cada noche a las 3 AM.
+          </p>
+        ) : (
+          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {featured.map((p) => (
               <li key={p.id}>
                 <Link
                   href={`/producto/${p.id}`}
                   className="flex h-full gap-3 rounded-lg border border-neutral-200 bg-white p-4 hover:border-neutral-900"
                 >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-3xl">
-                    {p.emoji}
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neutral-100">
+                    {p.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.imageUrl} alt={p.name} className="h-full w-full object-contain" />
+                    ) : (
+                      <span className="text-2xl">🛒</span>
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="line-clamp-2 text-sm font-medium">{p.name}</div>
-                    <div className="mt-1 text-xs text-neutral-500">{p.brand}</div>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ background: p.chainColor }}
+                      />
+                      <span className="text-neutral-500">{p.chainName}</span>
+                    </div>
                     <div className="mt-2 flex items-baseline gap-2">
                       <span className="text-lg font-bold text-emerald-600">
-                        {formatCLP(min.price)}
+                        {formatCLP(p.price)}
                       </span>
-                      <span className="text-xs text-neutral-500">en {minChain.name}</span>
+                      {p.listPrice && (
+                        <span className="text-xs text-neutral-400 line-through">
+                          {formatCLP(p.listPrice)}
+                        </span>
+                      )}
                     </div>
-                    {ahorro > 0 && (
-                      <div className="mt-1 text-xs text-neutral-400">
-                        Ahorra hasta {formatCLP(ahorro)} vs. el más caro
+                    {p.ahorroPct && (
+                      <div className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                        −{p.ahorroPct}% (ahorras {formatCLP(p.ahorro ?? 0)})
                       </div>
                     )}
                   </div>
                 </Link>
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+        )}
       </section>
 
       <footer className="mt-20 border-t border-neutral-200 pt-6 text-center text-xs text-neutral-500">
-        Demo con datos de ejemplo · Los precios reales se actualizan diariamente
+        Datos actualizados a diario desde los sitios oficiales de cada cadena
       </footer>
     </main>
   );
