@@ -150,7 +150,6 @@ export function ProductCard({ product: p, variant = "grid" }: Props) {
               key={op.id}
               href={`/producto/${op.id}`}
               className="flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600 hover:bg-neutral-200 transition"
-              onClick={(e) => e.stopPropagation()}
             >
               <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: op.chainColor }} />
               {op.chainName} {formatCLP(op.price)}
