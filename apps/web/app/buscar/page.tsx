@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { searchProducts, getChainsWithProducts } from "../../lib/queries";
+import { searchProducts, getChainsWithProducts, dedupResults } from "../../lib/queries";
 import { smartSearch } from "../../lib/ai-search";
 import { SearchInput } from "../../components/SearchInput";
 import { ProductCard } from "../../components/ProductCard";
@@ -47,7 +47,8 @@ export default async function SearchPage({ searchParams }: Props) {
     else if (sortVal === "price_desc") sorted = sorted.sort((a, b) => b.price - a.price);
     else if (sortVal === "discount") sorted = sorted.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
 
-    results = sorted;
+    // Dedup: fusionar el mismo producto de distintas cadenas en una sola card
+    results = dedupResults(sorted);
     // Mostrar badge IA sólo cuando la IA encontró más resultados que la búsqueda directa
     aiUsed = directCount < 4 && results.length > directCount;
   }

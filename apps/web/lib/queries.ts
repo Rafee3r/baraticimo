@@ -1,6 +1,14 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "./db";
 
+export interface OtherPrice {
+  id: string;
+  chainName: string;
+  chainColor: string;
+  chainSlug: string;
+  price: number;
+}
+
 export interface ProductRow {
   id: string;
   externalId: string;
@@ -19,6 +27,8 @@ export interface ProductRow {
   scrapedAt: string;
   ahorro: number | null;
   ahorroPct: number | null;
+  /** Mismo producto en otras cadenas, ordenado de más barato a más caro */
+  otherPrices?: OtherPrice[];
 }
 
 const CHAIN_COLORS: Record<string, string> = {
@@ -63,6 +73,65 @@ function rowFromChainProduct(cp: any): ProductRow | null {
     ahorro,
     ahorroPct,
   };
+}
+
+/**
+ * Normaliza un nombre de producto para agrupar duplicados entre cadenas.
+ * Elimina formatos (1kg, 500ml), números sueltos y puntuación.
+ * Toma las primeras 5 palabras significativas como clave de grupo.
+ */
+function dedupKey(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "") // quitar tildes
+    .replace(/\b\d+\s*(kg|g|ml|l|lt|cc|gr|un|pack|x\s*\d+)\b/gi, "") // quitar formatos
+    .replace(/[^\w\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 3)
+    .slice(0, 5)
+    .join(" ");
+}
+
+/**
+ * Agrupa una lista de ProductRow por nombre normalizado.
+ * Para cada grupo, el producto más barato es el "primario" y los demás
+ * se adjuntan como `otherPrices`. Elimina duplicados del mismo producto
+ * en la misma cadena (se queda con el más barato).
+ */
+export function dedupResults(rows: ProductRow[]): ProductRow[] {
+  const groups = new Map<string, ProductRow[]>();
+
+  for (const row of rows) {
+    const key = dedupKey(row.name);
+    const group = groups.get(key) ?? [];
+    group.push(row);
+    groups.set(key, group);
+  }
+
+  const result: ProductRow[] = [];
+
+  for (const group of groups.values()) {
+    // Dentro del grupo: una entrada por cadena (la más barata de esa cadena)
+    const byChain = new Map<string, ProductRow>();
+    for (const r of group) {
+      const existing = byChain.get(r.chainSlug);
+      if (!existing || r.price < existing.price) byChain.set(r.chainSlug, r);
+    }
+
+    const sorted = [...byChain.values()].sort((a, b) => a.price - b.price);
+    const primary = sorted[0]!;
+    const others: OtherPrice[] = sorted.slice(1).map((r) => ({
+      id: r.id,
+      chainName: r.chainName,
+      chainColor: r.chainColor,
+      chainSlug: r.chainSlug,
+      price: r.price,
+    }));
+
+    result.push({ ...primary, otherPrices: others.length > 0 ? others : undefined });
+  }
+
+  return result;
 }
 
 /** Productos destacados para el home: ofertas con buen % de descuento. */
