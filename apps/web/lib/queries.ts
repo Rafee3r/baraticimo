@@ -96,22 +96,63 @@ export async function searchProducts(
 ): Promise<ProductRow[]> {
   const q = query.trim();
   if (!q) return [];
-  const cps = await prisma.chainProduct.findMany({
-    where: {
-      OR: [
-        { name: { contains: q, mode: "insensitive" } },
-        { brand: { contains: q, mode: "insensitive" } },
-      ],
-      ...(opts.inStoreOnly ? { isOnlineOnly: false } : {}),
-      ...(opts.chainSlug ? { chain: { slug: opts.chainSlug } } : {}),
-    },
-    include: {
-      chain: true,
-      prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
-    },
-    take: opts.limit ?? 30,
-    orderBy: { lastSeenAt: "desc" },
-  });
+
+  const base = {
+    ...(opts.inStoreOnly ? { isOnlineOnly: false } : {}),
+    ...(opts.chainSlug ? { chain: { slug: opts.chainSlug } } : {}),
+  };
+  const include = {
+    chain: true,
+    prices: { orderBy: { scrapedAt: "desc" as const }, take: 1 },
+  };
+
+  // Si hay múltiples palabras, intentar AND primero (todas las palabras en el nombre).
+  // Esto da resultados mucho más precisos para búsquedas como "leche chocolate".
+  const words = q.split(/\s+/).filter((w) => w.length >= 2);
+  let cps: any[];
+
+  if (words.length >= 2) {
+    const andCps = await prisma.chainProduct.findMany({
+      where: {
+        AND: words.map((w) => ({ name: { contains: w, mode: "insensitive" as const } })),
+        ...base,
+      },
+      include,
+      take: opts.limit ?? 30,
+      orderBy: { lastSeenAt: "desc" },
+    });
+    if (andCps.length >= 2) {
+      cps = andCps;
+    } else {
+      // Fallback a búsqueda de frase exacta
+      cps = await prisma.chainProduct.findMany({
+        where: {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { brand: { contains: q, mode: "insensitive" } },
+          ],
+          ...base,
+        },
+        include,
+        take: opts.limit ?? 30,
+        orderBy: { lastSeenAt: "desc" },
+      });
+    }
+  } else {
+    cps = await prisma.chainProduct.findMany({
+      where: {
+        OR: [
+          { name: { contains: q, mode: "insensitive" } },
+          { brand: { contains: q, mode: "insensitive" } },
+        ],
+        ...base,
+      },
+      include,
+      take: opts.limit ?? 30,
+      orderBy: { lastSeenAt: "desc" },
+    });
+  }
+
   let rows = cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
   if (opts.sort === "price_asc") rows = rows.sort((a, b) => a.price - b.price);
   else if (opts.sort === "price_desc") rows = rows.sort((a, b) => b.price - a.price);
@@ -223,24 +264,72 @@ export async function getCrossChainMatches(
     .sort((a, b) => a.price - b.price);
 }
 
-/** Búsqueda por múltiples keywords con OR — usada por smartSearch. */
+/**
+ * Búsqueda por múltiples keywords — usada por smartSearch.
+ *
+ * Con múltiples keywords intenta AND primero (todas las palabras deben aparecer
+ * en el nombre). Si el resultado es insuficiente cae a OR para no quedarse sin
+ * resultados. Esto evita que "leche chocolate" devuelva comida de mascotas que
+ * solo contiene "leche" en el nombre.
+ */
 export async function searchProductsByKeywords(
   keywords: string[],
   opts: { limit?: number; inStoreOnly?: boolean } = {},
 ): Promise<ProductRow[]> {
   if (keywords.length === 0) return [];
+
+  const include = {
+    chain: true,
+    prices: { orderBy: { scrapedAt: "desc" as const }, take: 1 },
+  };
+  const base = opts.inStoreOnly ? { isOnlineOnly: false } : {};
+
+  // Intentar AND cuando hay 2+ keywords: todas deben aparecer en el nombre
+  if (keywords.length >= 2) {
+    const andCps = await prisma.chainProduct.findMany({
+      where: {
+        AND: keywords.map((k) => ({
+          name: { contains: k, mode: "insensitive" as const },
+        })),
+        ...base,
+      },
+      include,
+      take: opts.limit ?? 80,
+      orderBy: { lastSeenAt: "desc" },
+    });
+    const andRows = andCps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
+    if (andRows.length >= 4) return andRows;
+
+    // AND dio pocos resultados — completar con OR pero priorizando los AND
+    const orCps = await prisma.chainProduct.findMany({
+      where: {
+        OR: keywords.flatMap((k) => [
+          { name: { contains: k, mode: "insensitive" as const } },
+          { brand: { contains: k, mode: "insensitive" as const } },
+        ]),
+        ...base,
+      },
+      include,
+      take: opts.limit ?? 80,
+      orderBy: { lastSeenAt: "desc" },
+    });
+    const orRows = orCps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
+
+    // Merge: resultados AND primero (más relevantes), luego OR sin duplicados
+    const seen = new Set(andRows.map((r) => r.id));
+    return [...andRows, ...orRows.filter((r) => !seen.has(r.id))].slice(0, opts.limit ?? 80);
+  }
+
+  // Con 1 sola keyword usar OR normal (incluye name + brand)
   const cps = await prisma.chainProduct.findMany({
     where: {
       OR: keywords.flatMap((k) => [
         { name: { contains: k, mode: "insensitive" as const } },
         { brand: { contains: k, mode: "insensitive" as const } },
       ]),
-      ...(opts.inStoreOnly ? { isOnlineOnly: false } : {}),
+      ...base,
     },
-    include: {
-      chain: true,
-      prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
-    },
+    include,
     take: opts.limit ?? 80,
     orderBy: { lastSeenAt: "desc" },
   });
