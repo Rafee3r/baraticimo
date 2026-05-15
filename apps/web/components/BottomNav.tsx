@@ -7,7 +7,7 @@ const ITEMS = [
   { href: "/", label: "Inicio", icon: "🏠" },
   { href: "/buscar", label: "Buscar", icon: "🔍" },
   { href: "/lista", label: "Lista", icon: "🛒", showCount: true },
-  { href: "/favoritos", label: "Guardados", icon: "♥" },
+  { href: "/comparar", label: "Comparar", icon: "🔀" },
   { href: "/mas", label: "Más", icon: "⋯" },
 ];
 

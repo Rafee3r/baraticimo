@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "./db";
 
 export interface ProductRow {
@@ -81,7 +82,12 @@ export async function getFeaturedProducts(limit = 12): Promise<ProductRow[]> {
 /** Búsqueda case-insensitive en el nombre + marca. */
 export async function searchProducts(
   query: string,
-  opts: { limit?: number; inStoreOnly?: boolean } = {},
+  opts: {
+    limit?: number;
+    inStoreOnly?: boolean;
+    sort?: "relevance" | "price_asc" | "price_desc" | "discount";
+    chainSlug?: string;
+  } = {},
 ): Promise<ProductRow[]> {
   const q = query.trim();
   if (!q) return [];
@@ -92,6 +98,7 @@ export async function searchProducts(
         { brand: { contains: q, mode: "insensitive" } },
       ],
       ...(opts.inStoreOnly ? { isOnlineOnly: false } : {}),
+      ...(opts.chainSlug ? { chain: { slug: opts.chainSlug } } : {}),
     },
     include: {
       chain: true,
@@ -100,7 +107,11 @@ export async function searchProducts(
     take: opts.limit ?? 30,
     orderBy: { lastSeenAt: "desc" },
   });
-  return cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
+  let rows = cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
+  if (opts.sort === "price_asc") rows = rows.sort((a, b) => a.price - b.price);
+  else if (opts.sort === "price_desc") rows = rows.sort((a, b) => b.price - a.price);
+  else if (opts.sort === "discount") rows = rows.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
+  return rows;
 }
 
 /** Detalle de un producto + historial de precios. */
@@ -213,6 +224,62 @@ export async function searchProductsByKeywords(
     orderBy: { lastSeenAt: "desc" },
   });
   return cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
+}
+
+/** Cadenas con al menos 1 producto (para filtros de búsqueda). */
+export async function getChainsWithProducts() {
+  return prisma.chain.findMany({
+    where: { chainProducts: { some: {} } },
+    select: { slug: true, name: true },
+    orderBy: { name: "asc" },
+  });
+}
+
+/** CrossChainDeal: un producto más barato en cadena A vs cadena B. */
+export interface CrossChainDeal {
+  cheaper: ProductRow;
+  pricier: ProductRow;
+  savings: number;
+  savingsPct: number;
+}
+
+const _computeDeals = unstable_cache(
+  async (limit: number): Promise<CrossChainDeal[]> => {
+    const featured = await getFeaturedProducts(40);
+    const deals: CrossChainDeal[] = [];
+    for (const product of featured) {
+      if (deals.length >= limit * 3) break;
+      const matches = await getCrossChainMatches(product.id, 3);
+      const pricier = matches.find((m) => m.price > product.price + 200);
+      if (pricier) {
+        const savings = pricier.price - product.price;
+        deals.push({
+          cheaper: product,
+          pricier,
+          savings,
+          savingsPct: Math.round((savings / pricier.price) * 100),
+        });
+        continue;
+      }
+      const cheaper = matches.find((m) => m.price < product.price - 200);
+      if (cheaper) {
+        const savings = product.price - cheaper.price;
+        deals.push({
+          cheaper,
+          pricier: product,
+          savings,
+          savingsPct: Math.round((savings / product.price) * 100),
+        });
+      }
+    }
+    return deals.sort((a, b) => b.savings - a.savings).slice(0, limit);
+  },
+  ["top-cross-chain-deals"],
+  { revalidate: 1800 },
+);
+
+export async function getTopCrossChainDeals(limit = 6): Promise<CrossChainDeal[]> {
+  return _computeDeals(limit);
 }
 
 /** Las 8 categorías de la home en formato (categoría → 6 productos top). */

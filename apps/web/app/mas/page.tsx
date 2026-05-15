@@ -1,14 +1,40 @@
 import Link from "next/link";
+import { getStats } from "../../lib/queries";
 
 export const metadata = { title: "Más — Baratícimo" };
+export const revalidate = 300;
 
-export default function MasPage() {
+export default async function MasPage() {
+  const stats = await getStats();
+
   return (
     <main className="mx-auto max-w-2xl px-4 pt-4 sm:px-6 sm:pt-6">
       <h1 className="text-2xl font-bold">Más</h1>
       <p className="mt-1 text-sm text-neutral-500">
         Opciones y ajustes de Baratícimo
       </p>
+
+      {/* Stats en tiempo real */}
+      <div className="mt-6 grid grid-cols-3 gap-3">
+        <div className="rounded-2xl bg-white p-4 text-center ring-1 ring-neutral-200">
+          <div className="text-2xl font-bold text-neutral-900">
+            {stats.productCount.toLocaleString("es-CL")}
+          </div>
+          <div className="mt-0.5 text-xs text-neutral-500">Productos</div>
+        </div>
+        <div className="rounded-2xl bg-white p-4 text-center ring-1 ring-neutral-200">
+          <div className="text-2xl font-bold text-emerald-600">
+            {stats.saleCount.toLocaleString("es-CL")}
+          </div>
+          <div className="mt-0.5 text-xs text-neutral-500">En oferta</div>
+        </div>
+        <div className="rounded-2xl bg-white p-4 text-center ring-1 ring-neutral-200">
+          <div className="text-2xl font-bold text-neutral-900">
+            {stats.priceCount.toLocaleString("es-CL")}
+          </div>
+          <div className="mt-0.5 text-xs text-neutral-500">Registros</div>
+        </div>
+      </div>
 
       <section className="mt-6 space-y-3">
         <div className="rounded-2xl bg-white p-5 ring-1 ring-neutral-200">
@@ -24,28 +50,34 @@ export default function MasPage() {
           <h2 className="text-base font-semibold">🏪 Cadenas incluidas</h2>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {[
-              { name: "Jumbo", color: "#00873A", live: true },
-              { name: "Santa Isabel", color: "#E60028", live: true },
-              { name: "Líder", color: "#0071CE", live: false },
-              { name: "Tottus", color: "#FFB81C", live: false },
-              { name: "Unimarc", color: "#003DA5", live: false },
-              { name: "Cruz Verde", color: "#00A651", live: false },
-              { name: "Salcobrand", color: "#005DAA", live: false },
-              { name: "Ahumada", color: "#E4002B", live: false },
+              { name: "Jumbo", color: "#00873A", status: "live" as const },
+              { name: "Santa Isabel", color: "#E60028", status: "live" as const },
+              { name: "Tottus", color: "#FFB81C", status: "new" as const },
+              { name: "Líder", color: "#0071CE", status: "soon" as const },
+              { name: "Unimarc", color: "#003DA5", status: "soon" as const },
+              { name: "Cruz Verde", color: "#00A651", status: "soon" as const },
+              { name: "Salcobrand", color: "#005DAA", status: "soon" as const },
+              { name: "Ahumada", color: "#E4002B", status: "soon" as const },
             ].map((c) => (
               <div
                 key={c.name}
                 className="flex items-center gap-2 rounded-xl bg-neutral-50 px-3 py-2 text-sm"
               >
                 <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />
-                <span className={c.live ? "font-medium" : "text-neutral-400"}>
+                <span className={c.status !== "soon" ? "font-medium" : "text-neutral-400"}>
                   {c.name}
                 </span>
-                {c.live ? (
+                {c.status === "live" && (
                   <span className="ml-auto text-[10px] font-bold text-emerald-600">
                     ACTIVO
                   </span>
-                ) : (
+                )}
+                {c.status === "new" && (
+                  <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                    NUEVO
+                  </span>
+                )}
+                {c.status === "soon" && (
                   <span className="ml-auto text-[10px] text-neutral-400">PRONTO</span>
                 )}
               </div>
@@ -84,7 +116,7 @@ export default function MasPage() {
         </Link>
 
         <p className="pt-4 text-center text-xs text-neutral-400">
-          Hecho con ♥ en Chile · v3.0
+          Hecho con ♥ en Chile · v4.0
         </p>
       </section>
     </main>

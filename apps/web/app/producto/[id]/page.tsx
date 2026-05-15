@@ -49,9 +49,22 @@ export default async function ProductPage({ params }: Props) {
   const domain = CHAIN_DOMAINS[p.chainSlug] ?? "www.jumbo.cl";
   const externalHref = p.url.startsWith("http") ? p.url : `https://${domain}${p.url}`;
 
-  // Si hay matches y alguno es más barato
-  const cheaperMatch = matches.find((m) => m.price < p.price);
-  const cheaperAhorro = cheaperMatch ? p.price - cheaperMatch.price : 0;
+  // Price history badge
+  let priceBadge: { emoji: string; label: string; bg: string; text: string } | null = null;
+  if (history.length >= 5) {
+    const position = (p.price - minHist) / span;
+    if (position <= 0.15) {
+      priceBadge = { emoji: "🟢", label: "En su mínimo histórico", bg: "bg-emerald-50", text: "text-emerald-800" };
+    } else if (position >= 0.85) {
+      priceBadge = { emoji: "🔴", label: "En su precio máximo", bg: "bg-red-50", text: "text-red-800" };
+    } else {
+      priceBadge = { emoji: "🟡", label: "Precio normal", bg: "bg-amber-50", text: "text-amber-800" };
+    }
+  }
+
+  // All prices: current product + matches, sorted cheapest first
+  const allPrices = [p, ...matches].sort((a, b) => a.price - b.price);
+  const cheapestPrice = allPrices[0]?.price ?? p.price;
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-4 sm:px-6 sm:pt-6">
@@ -90,13 +103,14 @@ export default async function ProductPage({ params }: Props) {
 
       {/* Info */}
       <div className="mt-4">
-        <div className="flex items-center gap-1.5 text-sm text-neutral-500">
+        <div className="flex items-center gap-1.5 text-sm">
           <span
-            className="h-2 w-2 rounded-full"
+            className="h-2.5 w-2.5 rounded-full"
             style={{ background: p.chainColor }}
           />
-          <span className="font-medium">{p.chainName}</span>
-          {p.brand && <span>· {p.brand}</span>}
+          <span className="font-semibold" style={{ color: p.chainColor }}>{p.chainName}</span>
+          {p.brand && <span className="text-neutral-500">· {p.brand}</span>}
+          {p.format && <span className="text-neutral-400">· {p.format}</span>}
         </div>
         <h1 className="mt-1 text-2xl font-bold leading-tight">{p.name}</h1>
         {p.isOnlineOnly && (
@@ -107,24 +121,29 @@ export default async function ProductPage({ params }: Props) {
       </div>
 
       {/* Precio destacado */}
-      <div className="mt-4 rounded-3xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white shadow-lg">
-        <div className="text-xs font-semibold uppercase tracking-wider text-emerald-100">
+      <div className="mt-4 rounded-3xl bg-gradient-to-br from-neutral-900 to-neutral-800 p-6 text-white shadow-lg">
+        <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
           {p.isOnSale ? "🏷️ En oferta" : "Precio hoy"}
         </div>
         <div className="mt-1 flex items-baseline gap-3">
           <div className="text-4xl font-bold">{formatCLP(p.price)}</div>
           {p.listPrice && (
-            <div className="text-base font-medium text-emerald-200 line-through">
+            <div className="text-base font-medium text-neutral-400 line-through">
               {formatCLP(p.listPrice)}
             </div>
           )}
         </div>
         {p.ahorro && (
-          <div className="mt-1 text-sm text-emerald-50">
+          <div className="mt-1 text-sm text-emerald-400">
             Ahorras <strong>{formatCLP(p.ahorro)}</strong>
           </div>
         )}
-        <div className="mt-3 text-xs text-emerald-100">
+        {priceBadge && (
+          <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${priceBadge.bg} ${priceBadge.text}`}>
+            {priceBadge.emoji} {priceBadge.label}
+          </div>
+        )}
+        <div className="mt-3 text-xs text-neutral-500">
           Actualizado {timeAgo(p.scrapedAt)}
         </div>
       </div>
@@ -134,73 +153,68 @@ export default async function ProductPage({ params }: Props) {
         <AddToListButton productId={p.id} size="lg" />
       </div>
 
-      {/* Cross-chain matches */}
+      {/* Tabla comparativa de cadenas */}
       <section className="mt-5">
         <h2 className="text-base font-semibold">
-          {cheaperMatch
-            ? "💰 Lo encuentras más barato en otra cadena"
-            : "🏪 También en otras cadenas"}
+          {allPrices.length > 1 ? "🏪 Comparativa de precios por cadena" : "🏪 Precio en esta cadena"}
         </h2>
-        {matches.length === 0 ? (
-          <div className="mt-2 rounded-2xl bg-neutral-50 p-4 text-sm text-neutral-500">
-            No encontramos este producto en otra cadena (por ahora).
-          </div>
-        ) : (
-          <div className="mt-3 space-y-2">
-            {cheaperMatch && (
-              <div className="rounded-2xl bg-yellow-50 px-4 py-3 ring-1 ring-yellow-200">
-                <div className="text-xs font-semibold uppercase tracking-wider text-yellow-900">
-                  🏆 Ahorras {formatCLP(cheaperAhorro)} comprando en {cheaperMatch.chainName}
-                </div>
-              </div>
-            )}
-            {matches.map((m) => (
-              <Link
-                key={m.id}
-                href={`/producto/${m.id}`}
-                className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-neutral-200"
-              >
-                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
-                  {m.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={m.imageUrl}
-                      alt={m.name}
-                      className="h-full w-full object-contain"
-                    />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="line-clamp-1 text-sm font-medium">{m.name}</div>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-neutral-500">
-                    <span
-                      className="h-1.5 w-1.5 rounded-full"
-                      style={{ background: m.chainColor }}
-                    />
-                    {m.chainName}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div
-                    className={`text-base font-bold ${
-                      m.price < p.price ? "text-emerald-700" : "text-neutral-700"
-                    }`}
+        <div className="mt-3 overflow-hidden rounded-2xl bg-white ring-1 ring-neutral-200">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 bg-neutral-50 text-xs text-neutral-500">
+                <th className="px-4 py-2.5 text-left font-semibold">Cadena</th>
+                <th className="px-4 py-2.5 text-right font-semibold">Precio</th>
+                <th className="px-4 py-2.5 text-right font-semibold"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {allPrices.map((v, i) => {
+                const isCheapest = v.price === cheapestPrice;
+                const isCurrent = v.id === p.id;
+                return (
+                  <tr
+                    key={v.id}
+                    className={`border-b border-neutral-100 last:border-0 ${isCheapest ? "bg-emerald-50" : ""}`}
                   >
-                    {formatCLP(m.price)}
-                  </div>
-                  {m.price < p.price && (
-                    <div className="text-[10px] font-medium text-emerald-700">
-                      −{formatCLP(p.price - m.price)}
-                    </div>
-                  )}
-                </div>
-              </Link>
-            ))}
-            <p className="px-1 pt-1 text-[11px] text-neutral-400">
-              Coincidencias por similitud de nombre. Algunas pueden no ser
-              exactamente el mismo producto.
-            </p>
-          </div>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ background: v.chainColor }}
+                        />
+                        <span className={`font-medium ${isCurrent ? "" : "text-neutral-700"}`}>
+                          {v.chainName}
+                        </span>
+                        {isCheapest && i === 0 && (
+                          <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                            🏆 más barato
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={`font-bold ${isCheapest ? "text-emerald-700" : "text-neutral-700"}`}>
+                        {formatCLP(v.price)}
+                      </span>
+                      {!isCheapest && cheapestPrice < v.price && (
+                        <div className="text-[10px] text-red-500">
+                          +{formatCLP(v.price - cheapestPrice)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <AddToListButton productId={v.id} size="sm" />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {matches.length > 0 && (
+          <p className="px-1 pt-2 text-[11px] text-neutral-400">
+            Otras cadenas por similitud de nombre. Algunas pueden no ser exactamente el mismo producto.
+          </p>
         )}
       </section>
 
@@ -214,16 +228,32 @@ export default async function ProductPage({ params }: Props) {
           </p>
           <div className="mt-3 flex h-24 items-end gap-1">
             {history.slice(-30).map((h, i) => {
+              const isMin = h.price === minHist;
+              const isMax = h.price === maxHist;
+              const isCurrent = i === history.slice(-30).length - 1;
               const heightPct = ((h.price - minHist) / span) * 100;
+              const barColor = isCurrent
+                ? "bg-emerald-500"
+                : isMin
+                  ? "bg-emerald-300"
+                  : isMax
+                    ? "bg-red-300"
+                    : "bg-neutral-200";
               return (
                 <div
                   key={i}
-                  className="flex-1 rounded-t bg-emerald-200 transition hover:bg-emerald-400"
+                  className={`flex-1 rounded-t transition ${barColor}`}
                   style={{ height: `${20 + heightPct * 0.8}%` }}
                   title={`${formatCLP(h.price)} · ${new Date(h.at).toLocaleDateString("es-CL")}`}
                 />
               );
             })}
+          </div>
+          {/* Leyenda */}
+          <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-neutral-500">
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-emerald-500" /> Hoy</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-emerald-300" /> Mínimo</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-red-300" /> Máximo</span>
           </div>
         </div>
       )}

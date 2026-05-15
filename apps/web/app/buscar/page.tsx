@@ -1,27 +1,59 @@
 import Link from "next/link";
-import { searchProducts } from "../../lib/queries";
+import { searchProducts, getChainsWithProducts } from "../../lib/queries";
 import { smartSearch } from "../../lib/ai-search";
 import { SearchInput } from "../../components/SearchInput";
 import { ProductCard } from "../../components/ProductCard";
 
 export const revalidate = 120;
 
+type Sort = "relevance" | "price_asc" | "price_desc" | "discount";
+
 interface Props {
-  searchParams: Promise<{ q?: string; tienda?: string; ofertas?: string }>;
+  searchParams: Promise<{ q?: string; tienda?: string; ofertas?: string; sort?: string; cadena?: string }>;
 }
 
+const SORTS: { value: Sort; label: string }[] = [
+  { value: "relevance", label: "Relevancia" },
+  { value: "price_asc", label: "Precio ↑" },
+  { value: "price_desc", label: "Precio ↓" },
+  { value: "discount", label: "Mayor descuento" },
+];
+
 export default async function SearchPage({ searchParams }: Props) {
-  const { q = "", tienda, ofertas } = await searchParams;
+  const { q = "", tienda, ofertas, sort = "relevance", cadena } = await searchParams;
   const inStoreOnly = tienda === "1";
   const onlyOffers = ofertas === "1";
-  let results = q.trim()
-    ? await smartSearch(q, { limit: 80, inStoreOnly }).catch(() =>
-        searchProducts(q, { limit: 80, inStoreOnly }),
-      )
-    : [];
+  const sortVal = (SORTS.find((s) => s.value === sort)?.value ?? "relevance") as Sort;
+
+  const chains = await getChainsWithProducts();
+
+  // Smart search: try direct first to detect if AI was used
+  let results: Awaited<ReturnType<typeof searchProducts>> = [];
+  let aiUsed = false;
+
+  if (q.trim()) {
+    const direct = await searchProducts(q, { limit: 80, inStoreOnly, chainSlug: cadena, sort: sortVal });
+    if (direct.length >= 4) {
+      results = direct;
+    } else {
+      // Try AI-enhanced search
+      try {
+        const aiResults = await smartSearch(q, { limit: 80, inStoreOnly });
+        // Apply sort + chain filter on top
+        let sorted = cadena ? aiResults.filter((r) => r.chainSlug === cadena) : aiResults;
+        if (sortVal === "price_asc") sorted = sorted.sort((a, b) => a.price - b.price);
+        else if (sortVal === "price_desc") sorted = sorted.sort((a, b) => b.price - a.price);
+        else if (sortVal === "discount") sorted = sorted.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
+        results = sorted;
+        aiUsed = results.length > direct.length;
+      } catch {
+        results = direct;
+      }
+    }
+  }
+
   if (onlyOffers) results = results.filter((r) => r.isOnSale);
 
-  // Group helpers
   const offers = results.filter((r) => r.isOnSale).length;
   const inStore = results.filter((r) => !r.isOnlineOnly).length;
 
@@ -34,20 +66,63 @@ export default async function SearchPage({ searchParams }: Props) {
         {q.trim() && results.length > 0 && (
           <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
             <FilterChip
-              href={chipHref(q, { tienda, ofertas })}
+              href={chipHref(q, { tienda, ofertas, sort, cadena })}
               active={!inStoreOnly && !onlyOffers}
               label={`Todo · ${results.length}`}
             />
             <FilterChip
-              href={chipHref(q, { tienda, ofertas: ofertas ? undefined : "1" })}
+              href={chipHref(q, { tienda, ofertas: ofertas ? undefined : "1", sort, cadena })}
               active={onlyOffers}
               label={`🏷️ Ofertas · ${offers}`}
             />
             <FilterChip
-              href={chipHref(q, { tienda: tienda ? undefined : "1", ofertas })}
+              href={chipHref(q, { tienda: tienda ? undefined : "1", ofertas, sort, cadena })}
               active={inStoreOnly}
               label={`🏪 En tienda · ${inStore}`}
             />
+          </div>
+        )}
+
+        {/* Chain filter chips */}
+        {q.trim() && chains.length > 0 && (
+          <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
+            <FilterChip
+              href={chipHref(q, { tienda, ofertas, sort })}
+              active={!cadena}
+              label="Todas las cadenas"
+              variant="chain"
+            />
+            {chains.map((c) => (
+              <FilterChip
+                key={c.slug}
+                href={chipHref(q, { tienda, ofertas, sort, cadena: cadena === c.slug ? undefined : c.slug })}
+                active={cadena === c.slug}
+                label={c.name}
+                variant="chain"
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Sort pills */}
+        {q.trim() && results.length > 0 && (
+          <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
+            {SORTS.map((s) => (
+              <FilterChip
+                key={s.value}
+                href={chipHref(q, { tienda, ofertas, sort: s.value, cadena })}
+                active={sortVal === s.value}
+                label={s.label}
+                variant="sort"
+              />
+            ))}
+          </div>
+        )}
+
+        {/* AI indicator */}
+        {aiUsed && (
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700 ring-1 ring-violet-200">
+            ✨ Búsqueda mejorada con IA
           </div>
         )}
       </div>
@@ -63,9 +138,9 @@ export default async function SearchPage({ searchParams }: Props) {
       {q.trim() && results.length === 0 && (
         <div className="mt-12 rounded-2xl bg-white p-10 text-center ring-1 ring-neutral-200">
           <div className="text-5xl">🤔</div>
-          <p className="mt-3 font-medium">Sin resultados para “{q}”</p>
+          <p className="mt-3 font-medium">Sin resultados para "{q}"</p>
           <p className="mt-1 text-sm text-neutral-500">
-            Por ahora cubrimos Jumbo y Santa Isabel. Más cadenas próximamente.
+            Por ahora cubrimos Jumbo, Santa Isabel y Tottus. Más cadenas próximamente.
           </p>
           <Link
             href="/"
@@ -87,23 +162,36 @@ export default async function SearchPage({ searchParams }: Props) {
   );
 }
 
-function chipHref(q: string, params: { tienda?: string; ofertas?: string }) {
+function chipHref(q: string, params: { tienda?: string; ofertas?: string; sort?: string; cadena?: string }) {
   const u = new URLSearchParams({ q });
   if (params.tienda) u.set("tienda", params.tienda);
   if (params.ofertas) u.set("ofertas", params.ofertas);
+  if (params.sort && params.sort !== "relevance") u.set("sort", params.sort);
+  if (params.cadena) u.set("cadena", params.cadena);
   return `/buscar?${u.toString()}`;
 }
 
-function FilterChip({ href, active, label }: { href: string; active: boolean; label: string }) {
+function FilterChip({
+  href,
+  active,
+  label,
+  variant = "default",
+}: {
+  href: string;
+  active: boolean;
+  label: string;
+  variant?: "default" | "chain" | "sort";
+}) {
+  const base = "shrink-0 rounded-full px-3 py-1 text-xs font-medium transition";
+  const activeClass =
+    variant === "sort"
+      ? "bg-neutral-900 text-white shadow"
+      : variant === "chain"
+        ? "bg-neutral-800 text-white shadow"
+        : "bg-emerald-600 text-white shadow";
+  const inactiveClass = "bg-white text-neutral-600 ring-1 ring-neutral-200 hover:ring-neutral-300";
   return (
-    <Link
-      href={href}
-      className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition ${
-        active
-          ? "bg-emerald-600 text-white shadow"
-          : "bg-white text-neutral-700 ring-1 ring-neutral-200 hover:ring-neutral-300"
-      }`}
-    >
+    <Link href={href} className={`${base} ${active ? activeClass : inactiveClass}`}>
       {label}
     </Link>
   );

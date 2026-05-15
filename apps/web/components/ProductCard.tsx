@@ -36,6 +36,9 @@ export function ProductCard({ product: p, variant = "grid" }: Props) {
           <div className="line-clamp-2 min-h-[2.25rem] text-[11px] font-medium leading-tight">
             {p.name}
           </div>
+          {p.format && (
+            <div className="text-[10px] text-neutral-400">{p.format}</div>
+          )}
           <div className="text-sm font-bold text-neutral-900">{formatCLP(p.price)}</div>
         </div>
       </Link>
@@ -87,7 +90,10 @@ export function ProductCard({ product: p, variant = "grid" }: Props) {
 
   // grid (default)
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white transition">
+    <div
+      className="group relative flex flex-col overflow-hidden rounded-2xl border-l-4 border-t border-r border-b border-neutral-200 bg-white transition"
+      style={{ borderLeftColor: p.chainColor }}
+    >
       <Link href={`/producto/${p.id}`} className="block">
         <div className="relative aspect-square w-full overflow-hidden bg-neutral-50">
           {p.imageUrl ? (
@@ -115,13 +121,17 @@ export function ProductCard({ product: p, variant = "grid" }: Props) {
           )}
         </div>
         <div className="flex flex-1 flex-col gap-1 p-3 pb-2">
-          <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: p.chainColor }} />
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: p.chainColor }}>
             {p.chainName}
           </div>
           <div className="line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-tight">
             {p.name}
           </div>
+          {(p.brand || p.format) && (
+            <div className="text-[10px] text-neutral-400 leading-tight">
+              {[p.brand, p.format].filter(Boolean).join(" · ")}
+            </div>
+          )}
           <div className="mt-1 flex items-baseline gap-1.5">
             <span className="text-base font-bold text-neutral-900">{formatCLP(p.price)}</span>
             {p.listPrice && (
