@@ -27,29 +27,29 @@ export default async function SearchPage({ searchParams }: Props) {
 
   const chains = await getChainsWithProducts();
 
-  // Smart search: try direct first to detect if AI was used
+  // Smart search: una sola llamada que maneja los 3 niveles internamente
   let results: Awaited<ReturnType<typeof searchProducts>> = [];
   let aiUsed = false;
 
   if (q.trim()) {
-    const direct = await searchProducts(q, { limit: 80, inStoreOnly, chainSlug: cadena, sort: sortVal });
-    if (direct.length >= 4) {
-      results = direct;
-    } else {
-      // Try AI-enhanced search
-      try {
-        const aiResults = await smartSearch(q, { limit: 80, inStoreOnly });
-        // Apply sort + chain filter on top
-        let sorted = cadena ? aiResults.filter((r) => r.chainSlug === cadena) : aiResults;
-        if (sortVal === "price_asc") sorted = sorted.sort((a, b) => a.price - b.price);
-        else if (sortVal === "price_desc") sorted = sorted.sort((a, b) => b.price - a.price);
-        else if (sortVal === "discount") sorted = sorted.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
-        results = sorted;
-        aiUsed = results.length > direct.length;
-      } catch {
-        results = direct;
-      }
-    }
+    // smartSearch internamente hace búsqueda directa primero (0 tokens si ≥4 resultados)
+    // y sólo activa IA si los resultados son insuficientes.
+    const [directCount, aiResults] = await Promise.all([
+      searchProducts(q, { limit: 1, inStoreOnly }).then((r) => r.length),
+      smartSearch(q, { limit: 80, inStoreOnly }).catch(() =>
+        searchProducts(q, { limit: 80, inStoreOnly }),
+      ),
+    ]);
+
+    // Aplicar filtros de sort y cadena encima del resultado
+    let sorted = cadena ? aiResults.filter((r) => r.chainSlug === cadena) : aiResults;
+    if (sortVal === "price_asc") sorted = sorted.sort((a, b) => a.price - b.price);
+    else if (sortVal === "price_desc") sorted = sorted.sort((a, b) => b.price - a.price);
+    else if (sortVal === "discount") sorted = sorted.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
+
+    results = sorted;
+    // Mostrar badge IA sólo cuando la IA encontró más resultados que la búsqueda directa
+    aiUsed = directCount < 4 && results.length > directCount;
   }
 
   if (onlyOffers) results = results.filter((r) => r.isOnSale);

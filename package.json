@@ -8,9 +8,10 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "db:generate": "pnpm --filter @baraticimo/api prisma generate",
-    "db:migrate": "pnpm --filter @baraticimo/api prisma migrate dev",
-    "db:seed": "pnpm --filter @baraticimo/api db:seed",
+    "db:generate": "prisma generate --schema infra/prisma/schema.prisma",
+    "db:push": "prisma db push --schema infra/prisma/schema.prisma",
+    "db:migrate": "psql $DATABASE_URL -f infra/prisma/migrations/001_trgm_indexes.sql",
+    "db:seed": "tsx infra/prisma/seed.ts",
     "scrape:jumbo": "pnpm --filter @baraticimo/scrapers scrape:jumbo"
   },
   "devDependencies": {
