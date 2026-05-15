@@ -88,14 +88,16 @@ function rowFromChainProduct(cp: any): ProductRow | null {
  *   20 — la query aparece en la segunda mitad (ingrediente, descripción)
  *    5 — la query solo aparece en brand/format, no en el nombre principal
  */
-function relevanceScore(row: ProductRow, query: string): number {
-  const normalize = (s: string) =>
-    s.toLowerCase()
-     .normalize("NFD").replace(/[̀-ͯ]/g, "") // quitar tildes
-     .trim();
+/** Normaliza string: minúsculas, sin tildes/diacríticos, sin espacios extra. */
+function normalizeStr(s: string): string {
+  // \p{M} = Unicode "Mark" category (combining diacritical marks).
+  // Más robusto que un rango literal de caracteres invisibles.
+  return s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").trim();
+}
 
-  const name = normalize(row.name);
-  const q = normalize(query);
+function relevanceScore(row: ProductRow, query: string): number {
+  const name = normalizeStr(row.name);
+  const q = normalizeStr(query);
   const words = name.split(/\s+/);
   const half = Math.max(1, Math.floor(words.length / 2));
 
@@ -140,9 +142,7 @@ function sortByRelevance(rows: ProductRow[], query: string): ProductRow[] {
  * Toma las primeras 5 palabras significativas como clave de grupo.
  */
 function dedupKey(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD").replace(/[̀-ͯ]/g, "") // quitar tildes
+  return normalizeStr(name)
     .replace(/\b\d+\s*(kg|g|ml|l|lt|cc|gr|un|pack|x\s*\d+)\b/gi, "") // quitar formatos
     .replace(/[^\w\s]/g, " ")
     .split(/\s+/)

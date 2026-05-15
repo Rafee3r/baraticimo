@@ -17,7 +17,7 @@ export default async function HomePage() {
     await Promise.all([
       getFeaturedProducts(10),
       getStats(),
-      getTopCrossChainDeals(4),
+      getTopCrossChainDeals(4).catch(() => []),
       getOffersByKeyword("leche", 8),
       getOffersByKeyword("arroz", 8),
       getOffersByKeyword("bebida", 8),
