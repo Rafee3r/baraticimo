@@ -53,8 +53,8 @@ export default async function MasPage() {
               { name: "Jumbo", color: "#00873A", status: "live" as const },
               { name: "Santa Isabel", color: "#E60028", status: "live" as const },
               { name: "Tottus", color: "#FFB81C", status: "new" as const },
-              { name: "Líder", color: "#0071CE", status: "soon" as const },
-              { name: "Unimarc", color: "#003DA5", status: "soon" as const },
+              { name: "Líder", color: "#0071CE", status: "new" as const },
+              { name: "Unimarc", color: "#003DA5", status: "new" as const },
               { name: "Cruz Verde", color: "#00A651", status: "soon" as const },
               { name: "Salcobrand", color: "#005DAA", status: "soon" as const },
               { name: "Ahumada", color: "#E4002B", status: "soon" as const },
@@ -102,6 +102,16 @@ export default async function MasPage() {
             </li>
           </ul>
         </div>
+
+        <Link
+          href="/favoritos"
+          className="block rounded-2xl bg-white p-5 ring-1 ring-neutral-200"
+        >
+          <h2 className="text-base font-semibold">♥ Mis guardados</h2>
+          <p className="mt-1 text-sm text-neutral-600">
+            Ver los productos que marcaste como favorito →
+          </p>
+        </Link>
 
         <Link
           href="https://github.com/Rafee3r/baraticimo"

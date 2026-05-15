@@ -7,6 +7,8 @@
     "scrape:jumbo": "tsx src/playwright/jumbo.ts",
     "scrape:santa-isabel": "tsx src/playwright/santa-isabel.ts",
     "scrape:tottus": "tsx src/playwright/tottus.ts",
+    "scrape:unimarc": "tsx src/playwright/unimarc.ts",
+    "scrape:lider": "tsx src/playwright/lider.ts",
     "probe": "tsx src/playwright/probe.ts",
     "typecheck": "tsc --noEmit"
   },
