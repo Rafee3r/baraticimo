@@ -76,6 +76,65 @@ function rowFromChainProduct(cp: any): ProductRow | null {
 }
 
 /**
+ * Calcula qué tan relevante es un producto para una query.
+ * Prioriza productos cuyo nombre EMPIEZA con la query (ej: "Leche Entera")
+ * sobre los que la contienen al final (ej: "Alimento Gato Carne y Leche").
+ *
+ * Score:
+ *  100 — el nombre empieza exactamente con la query
+ *   90 — la primera palabra del nombre ES la query
+ *   70 — la query aparece en las primeras 2 palabras
+ *   50 — la query aparece en la primera mitad del nombre
+ *   20 — la query aparece en la segunda mitad (ingrediente, descripción)
+ *    5 — la query solo aparece en brand/format, no en el nombre principal
+ */
+function relevanceScore(row: ProductRow, query: string): number {
+  const normalize = (s: string) =>
+    s.toLowerCase()
+     .normalize("NFD").replace(/[̀-ͯ]/g, "") // quitar tildes
+     .trim();
+
+  const name = normalize(row.name);
+  const q = normalize(query);
+  const words = name.split(/\s+/);
+  const half = Math.max(1, Math.floor(words.length / 2));
+
+  if (name.startsWith(q)) return 100;
+  if (words[0] === q) return 90;
+  if (words.slice(0, 2).some((w) => w.startsWith(q))) return 70;
+  if (words.slice(0, half).some((w) => w.includes(q))) return 50;
+  if (name.includes(q)) return 20;
+  return 5;
+}
+
+/**
+ * Ordena resultados por relevancia posicional + descuento como desempate.
+ * Se usa en todas las búsquedas cuando el sort es "relevance".
+ */
+function sortByRelevance(rows: ProductRow[], query: string): ProductRow[] {
+  // Para queries multi-palabra, score = promedio de cada palabra
+  const words = query.trim().split(/\s+/).filter((w) => w.length >= 2);
+  const score = (row: ProductRow) => {
+    if (words.length === 1) return relevanceScore(row, words[0]!);
+    const avg = words.reduce((sum, w) => sum + relevanceScore(row, w), 0) / words.length;
+    // Bonus si el nombre contiene todas las palabras juntas (frase exacta)
+    const name = row.name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const phraseBonus = words.every((w) =>
+      name.includes(w.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""))
+    ) ? 15 : 0;
+    return avg + phraseBonus;
+  };
+
+  return [...rows].sort((a, b) => {
+    const diff = score(b) - score(a);
+    if (Math.abs(diff) > 5) return diff;
+    // Desempate: isOnSale y luego ahorroPct
+    if (a.isOnSale !== b.isOnSale) return a.isOnSale ? -1 : 1;
+    return (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0);
+  });
+}
+
+/**
  * Normaliza un nombre de producto para agrupar duplicados entre cadenas.
  * Elimina formatos (1kg, 500ml), números sueltos y puntuación.
  * Toma las primeras 5 palabras significativas como clave de grupo.
@@ -226,6 +285,7 @@ export async function searchProducts(
   if (opts.sort === "price_asc") rows = rows.sort((a, b) => a.price - b.price);
   else if (opts.sort === "price_desc") rows = rows.sort((a, b) => b.price - a.price);
   else if (opts.sort === "discount") rows = rows.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
+  else rows = sortByRelevance(rows, q); // "relevance" (default)
   return rows;
 }
 
@@ -367,7 +427,7 @@ export async function searchProductsByKeywords(
       orderBy: { lastSeenAt: "desc" },
     });
     const andRows = andCps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
-    if (andRows.length >= 4) return andRows;
+    if (andRows.length >= 4) return sortByRelevance(andRows, keywords.join(" "));
 
     // AND dio pocos resultados — completar con OR pero priorizando los AND
     const orCps = await prisma.chainProduct.findMany({
@@ -384,9 +444,10 @@ export async function searchProductsByKeywords(
     });
     const orRows = orCps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
 
-    // Merge: resultados AND primero (más relevantes), luego OR sin duplicados
+    // Merge: resultados AND primero, luego OR sin duplicados, todo por relevancia
     const seen = new Set(andRows.map((r) => r.id));
-    return [...andRows, ...orRows.filter((r) => !seen.has(r.id))].slice(0, opts.limit ?? 80);
+    const merged = [...andRows, ...orRows.filter((r) => !seen.has(r.id))];
+    return sortByRelevance(merged, keywords.join(" ")).slice(0, opts.limit ?? 80);
   }
 
   // Con 1 sola keyword usar OR normal (incluye name + brand)
@@ -402,7 +463,8 @@ export async function searchProductsByKeywords(
     take: opts.limit ?? 80,
     orderBy: { lastSeenAt: "desc" },
   });
-  return cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
+  const rows = cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
+  return sortByRelevance(rows, keywords[0] ?? "");
 }
 
 /** Cadenas con al menos 1 producto (para filtros de búsqueda). */
