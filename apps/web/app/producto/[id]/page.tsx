@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import {
   getCrossChainMatches,
   getProductDetail,
@@ -11,6 +12,30 @@ export const revalidate = 120;
 
 interface Props {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const data = await getProductDetail(id);
+  if (!data) return { title: "Producto no encontrado" };
+  const { row: p } = data;
+
+  const price = `$${p.price.toLocaleString("es-CL")}`;
+  const title = `${p.name} — ${price} en ${p.chainName}`;
+  const description = `Compara el precio de ${p.name} en supermercados de Chile. Hoy en ${p.chainName}: ${price}${p.ahorro ? `, ahorra $${p.ahorro.toLocaleString("es-CL")}` : ""}.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      ...(p.imageUrl ? { images: [{ url: p.imageUrl, width: 400, height: 400, alt: p.name }] } : {}),
+    },
+    alternates: {
+      canonical: `/producto/${id}`,
+    },
+  };
 }
 
 function formatCLP(n: number) {

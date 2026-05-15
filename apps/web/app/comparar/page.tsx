@@ -5,7 +5,11 @@ import { AddToListButton } from "../../components/AddToListButton";
 import Link from "next/link";
 
 export const revalidate = 180;
-export const metadata = { title: "Comparar — Baratícimo" };
+export const metadata = {
+  title: "Comparar precios de supermercados",
+  description: "Busca cualquier producto y ve su precio en Jumbo, Santa Isabel, Tottus, Líder y Unimarc de un vistazo.",
+  alternates: { canonical: "/comparar" },
+};
 
 function formatCLP(n: number) {
   return `$${n.toLocaleString("es-CL")}`;

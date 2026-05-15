@@ -33,6 +33,9 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  alternates: {
+    canonical: "https://baraticimo.cl",
+  },
 };
 
 export const viewport: Viewport = {
