@@ -36,7 +36,12 @@ function rowFromChainProduct(cp: any): ProductRow | null {
   const latest = cp.prices[0];
   if (!latest) return null;
   const price = Number(latest.price);
-  const listPrice = latest.listPrice ? Number(latest.listPrice) : null;
+  // Sanity check: si el listPrice es más de 3× el precio de venta, es
+  // probablemente un error de scraping (capturó el precio de otro producto).
+  const rawListPrice = latest.listPrice ? Number(latest.listPrice) : null;
+  const listPrice = rawListPrice && rawListPrice > price && rawListPrice <= price * 3
+    ? rawListPrice
+    : null;
   const ahorro = listPrice && listPrice > price ? listPrice - price : null;
   const ahorroPct = ahorro && listPrice ? Math.round((ahorro / listPrice) * 100) : null;
   return {
@@ -196,9 +201,25 @@ export async function getCrossChainMatches(
     take: limit,
   });
 
+  // Obtener el precio del producto fuente para filtrar por ratio
+  const sourceProduct = await prisma.chainProduct.findUnique({
+    where: { id: productId },
+    include: { prices: { orderBy: { scrapedAt: "desc" }, take: 1 } },
+  });
+  const sourcePrice = sourceProduct?.prices[0] ? Number(sourceProduct.prices[0].price) : null;
+
   return candidates
     .map(rowFromChainProduct)
-    .filter((r): r is ProductRow => r !== null)
+    .filter((r): r is ProductRow => {
+      if (!r) return false;
+      // Filtro de ratio: descartar matches con diferencia de precio mayor a 3x.
+      // Evita comparar un sachet de $890 con un pack de $24.500.
+      if (sourcePrice && sourcePrice > 0) {
+        const ratio = Math.max(r.price, sourcePrice) / Math.min(r.price, sourcePrice);
+        if (ratio > 3) return false;
+      }
+      return true;
+    })
     .sort((a, b) => a.price - b.price);
 }
 
@@ -247,29 +268,30 @@ const _computeDeals = unstable_cache(
   async (limit: number): Promise<CrossChainDeal[]> => {
     const featured = await getFeaturedProducts(40);
     const deals: CrossChainDeal[] = [];
+    // Máximo 45% de ahorro y mínimo $300 de diferencia para que el deal sea creíble.
+    // Evita mostrar comparaciones donde el "match" no es el mismo producto.
+    const MAX_SAVINGS_PCT = 45;
+    const MIN_SAVINGS_ABS = 300;
+
     for (const product of featured) {
       if (deals.length >= limit * 3) break;
       const matches = await getCrossChainMatches(product.id, 3);
-      const pricier = matches.find((m) => m.price > product.price + 200);
-      if (pricier) {
-        const savings = pricier.price - product.price;
-        deals.push({
-          cheaper: product,
-          pricier,
-          savings,
-          savingsPct: Math.round((savings / pricier.price) * 100),
-        });
-        continue;
-      }
-      const cheaper = matches.find((m) => m.price < product.price - 200);
-      if (cheaper) {
-        const savings = product.price - cheaper.price;
-        deals.push({
-          cheaper,
-          pricier: product,
-          savings,
-          savingsPct: Math.round((savings / product.price) * 100),
-        });
+
+      for (const match of matches) {
+        const low = Math.min(product.price, match.price);
+        const high = Math.max(product.price, match.price);
+        const savings = high - low;
+        const savingsPct = Math.round((savings / high) * 100);
+
+        // Filtros de calidad: diferencia mínima $300 y máximo 45%
+        if (savings < MIN_SAVINGS_ABS) continue;
+        if (savingsPct > MAX_SAVINGS_PCT) continue;
+
+        const cheaper = product.price <= match.price ? product : match;
+        const pricier = product.price <= match.price ? match : product;
+
+        deals.push({ cheaper, pricier, savings, savingsPct });
+        break; // 1 deal por producto fuente es suficiente
       }
     }
     return deals.sort((a, b) => b.savings - a.savings).slice(0, limit);
