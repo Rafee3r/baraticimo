@@ -29,8 +29,8 @@ export default async function HomePage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 sm:pt-6">
       {/* Hero */}
-      <section className="rounded-3xl bg-gradient-to-br from-emerald-700 to-emerald-900 p-5 text-white shadow-lg sm:p-7">
-        <h1 className="text-xl font-bold leading-tight tracking-tight sm:text-2xl">
+      <section className="rounded-3xl bg-gradient-to-br from-emerald-700 to-emerald-900 p-5 shadow-lg sm:p-7">
+        <h1 className="text-xl font-bold leading-tight tracking-tight text-white sm:text-2xl">
           Compara precios en supermercados y farmacias
         </h1>
         <p className="mt-1 text-sm text-emerald-200">
