@@ -126,7 +126,7 @@ export default async function MasPage() {
         </Link>
 
         <p className="pt-4 text-center text-xs text-neutral-400">
-          Hecho con ♥ en Chile · v4.0
+          Hecho con ♥ en Chile
         </p>
       </section>
     </main>

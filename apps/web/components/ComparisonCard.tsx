@@ -40,25 +40,31 @@ export function ComparisonCard({ deal }: Props) {
       {/* Two columns: cheap vs pricier */}
       <div className="grid grid-cols-2 gap-px bg-neutral-100">
         {/* Cheaper */}
-        <div
-          className="flex flex-col gap-1.5 p-3"
+        <Link
+          href={`/producto/${cheaper.id}`}
+          className="flex flex-col gap-1 p-3"
           style={{ borderLeft: `3px solid ${cheaper.chainColor}`, backgroundColor: `${cheaper.chainColor}10` }}
         >
           <div className="text-[11px] font-bold" style={{ color: cheaper.chainColor }}>
             🏆 {cheaper.chainName}
           </div>
-          <div className="text-xl font-bold text-neutral-900">{formatCLP(cheaper.price)}</div>
+          <div className="text-lg font-bold text-neutral-900">{formatCLP(cheaper.price)}</div>
           <AddToListButton productId={cheaper.id} size="sm" />
-        </div>
+        </Link>
 
         {/* Pricier */}
-        <div className="flex flex-col gap-1.5 p-3 bg-neutral-50">
-          <div className="text-[11px] font-bold text-neutral-500">
+        <Link
+          href={`/producto/${pricier.id}`}
+          className="flex flex-col gap-1 bg-neutral-50 p-3"
+        >
+          <div className="text-[11px] font-semibold text-neutral-400">
             {pricier.chainName}
           </div>
-          <div className="text-xl font-bold text-neutral-400">{formatCLP(pricier.price)}</div>
-          <AddToListButton productId={pricier.id} size="sm" />
-        </div>
+          <div className="text-lg font-bold text-neutral-400 line-through decoration-1">
+            {formatCLP(pricier.price)}
+          </div>
+          <div className="text-[10px] text-neutral-400">+{formatCLP(savings)} más caro</div>
+        </Link>
       </div>
     </div>
   );

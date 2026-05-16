@@ -63,7 +63,7 @@ export default async function SearchPage({ searchParams }: Props) {
       <div className="sticky top-[57px] z-10 -mx-4 bg-[var(--background)] px-4 pb-3 pt-1 sm:top-[65px] sm:mx-0 sm:px-0">
         <SearchInput defaultValue={q} size="md" />
 
-        {/* Filter chips */}
+        {/* Fila 1: Filtros principales + sort */}
         {q.trim() && results.length > 0 && (
           <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
             <FilterChip
@@ -81,16 +81,32 @@ export default async function SearchPage({ searchParams }: Props) {
               active={inStoreOnly}
               label={`🏪 En tienda · ${inStore}`}
             />
+            {/* Separador visual */}
+            <span className="shrink-0 self-center text-neutral-300">|</span>
+            {SORTS.filter((s) => s.value !== "relevance").map((s) => (
+              <FilterChip
+                key={s.value}
+                href={chipHref(q, { tienda, ofertas, sort: s.value, cadena })}
+                active={sortVal === s.value}
+                label={s.label}
+                variant="sort"
+              />
+            ))}
+            {aiUsed && (
+              <span className="shrink-0 self-center rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-medium text-violet-600 ring-1 ring-violet-200">
+                ✨ IA
+              </span>
+            )}
           </div>
         )}
 
-        {/* Chain filter chips */}
+        {/* Fila 2: Cadenas */}
         {q.trim() && chains.length > 0 && (
           <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
             <FilterChip
               href={chipHref(q, { tienda, ofertas, sort })}
               active={!cadena}
-              label="Todas las cadenas"
+              label="Todas"
               variant="chain"
             />
             {chains.map((c) => (
@@ -102,28 +118,6 @@ export default async function SearchPage({ searchParams }: Props) {
                 variant="chain"
               />
             ))}
-          </div>
-        )}
-
-        {/* Sort pills */}
-        {q.trim() && results.length > 0 && (
-          <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
-            {SORTS.map((s) => (
-              <FilterChip
-                key={s.value}
-                href={chipHref(q, { tienda, ofertas, sort: s.value, cadena })}
-                active={sortVal === s.value}
-                label={s.label}
-                variant="sort"
-              />
-            ))}
-          </div>
-        )}
-
-        {/* AI indicator */}
-        {aiUsed && (
-          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700 ring-1 ring-violet-200">
-            ✨ Búsqueda mejorada con IA
           </div>
         )}
       </div>
@@ -141,7 +135,7 @@ export default async function SearchPage({ searchParams }: Props) {
           <div className="text-5xl">🤔</div>
           <p className="mt-3 font-medium">Sin resultados para "{q}"</p>
           <p className="mt-1 text-sm text-neutral-500">
-            Por ahora cubrimos Jumbo, Santa Isabel y Tottus. Más cadenas próximamente.
+            Intenta con otro nombre o revisa la ortografía.
           </p>
           <Link
             href="/"

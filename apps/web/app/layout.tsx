@@ -54,7 +54,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ListProvider>
           <Header />
-          {children}
+          <div className="pb-24 md:pb-0">
+            {children}
+          </div>
           <BottomNav />
         </ListProvider>
       </body>

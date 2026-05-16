@@ -17,9 +17,9 @@ export function ProductCard({ product: p, variant = "grid" }: Props) {
     return (
       <Link
         href={`/producto/${p.id}`}
-        className="flex shrink-0 flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-neutral-200 transition active:scale-[0.98]"
+        className="flex w-full flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-neutral-200 transition active:scale-[0.98]"
       >
-        <div className="relative aspect-square w-32 bg-neutral-50">
+        <div className="relative aspect-square w-full bg-neutral-50">
           {p.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={p.imageUrl} alt={p.name} className="h-full w-full object-contain p-2" />
@@ -32,14 +32,18 @@ export function ProductCard({ product: p, variant = "grid" }: Props) {
             </span>
           )}
         </div>
-        <div className="flex w-32 flex-col gap-0.5 p-2">
+        <div className="flex w-full flex-col gap-0.5 p-2">
           <div className="line-clamp-2 min-h-[2.25rem] text-[11px] font-medium leading-tight">
             {p.name}
           </div>
           {p.format && (
             <div className="text-[10px] text-neutral-400">{p.format}</div>
           )}
-          <div className="text-sm font-bold text-neutral-900">{formatCLP(p.price)}</div>
+          <div className="mt-0.5 text-sm font-bold text-neutral-900">{formatCLP(p.price)}</div>
+          <div className="mt-0.5 flex items-center gap-1 text-[10px] text-neutral-400">
+            <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: p.chainColor }} />
+            {p.chainName}
+          </div>
         </div>
       </Link>
     );
@@ -90,10 +94,9 @@ export function ProductCard({ product: p, variant = "grid" }: Props) {
 
   // grid (default)
   return (
-    <div
-      className="group relative flex flex-col overflow-hidden rounded-2xl border-l-4 border-t border-r border-b border-neutral-200 bg-white transition"
-      style={{ borderLeftColor: p.chainColor }}
-    >
+    <div className="group relative flex flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-neutral-200 transition">
+      {/* Franja de color de cadena en la parte superior */}
+      <div className="h-1 w-full shrink-0" style={{ background: p.chainColor }} />
       <Link href={`/producto/${p.id}`} className="block">
         <div className="relative aspect-square w-full overflow-hidden bg-neutral-50">
           {p.imageUrl ? (

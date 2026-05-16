@@ -28,17 +28,14 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 sm:pt-6">
-      {/* Hero — dark */}
-      <section className="rounded-3xl bg-gradient-to-br from-neutral-900 to-neutral-800 p-6 text-white shadow-lg sm:p-8">
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80 ring-1 ring-white/20">
-          ✨ v4.0
-        </div>
-        <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
-          Compara y arma tu lista
+      {/* Hero */}
+      <section className="rounded-3xl bg-gradient-to-br from-emerald-700 to-emerald-900 p-5 text-white shadow-lg sm:p-7">
+        <h1 className="text-xl font-bold leading-tight tracking-tight sm:text-2xl">
+          Compara precios en supermercados y farmacias
         </h1>
-        <p className="mt-1 text-sm text-neutral-300">
+        <p className="mt-1 text-sm text-emerald-200">
           {stats.productCount.toLocaleString("es-CL")} productos ·{" "}
-          <span className="font-semibold text-emerald-400">{stats.saleCount.toLocaleString("es-CL")} en oferta</span>
+          <span className="font-semibold text-white">{stats.saleCount.toLocaleString("es-CL")} en oferta hoy</span>
         </p>
         <div className="mt-4">
           <SearchInput size="lg" />
@@ -182,7 +179,7 @@ function SectionRow({
       {/* Horizontal scroll en todos los tamaños — patrón de app */}
       <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar sm:mx-0 sm:px-0">
         {products.map((p) => (
-          <div key={p.id} className="w-36 shrink-0 sm:w-44">
+          <div key={p.id} className="w-32 shrink-0 sm:w-40">
             <ProductCard product={p} variant="compact" />
           </div>
         ))}
