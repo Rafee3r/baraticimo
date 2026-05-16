@@ -9,6 +9,9 @@
     "scrape:tottus": "tsx src/playwright/tottus.ts",
     "scrape:unimarc": "tsx src/playwright/unimarc.ts",
     "scrape:lider": "tsx src/playwright/lider.ts",
+    "scrape:cruz-verde": "tsx src/playwright/cruz-verde.ts",
+    "scrape:salcobrand": "tsx src/playwright/salcobrand.ts",
+    "scrape:ahumada": "tsx src/playwright/ahumada.ts",
     "probe": "tsx src/playwright/probe.ts",
     "typecheck": "tsc --noEmit"
   },

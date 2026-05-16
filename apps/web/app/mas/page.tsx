@@ -55,9 +55,9 @@ export default async function MasPage() {
               { name: "Tottus", color: "#FFB81C", status: "new" as const },
               { name: "Líder", color: "#0071CE", status: "new" as const },
               { name: "Unimarc", color: "#003DA5", status: "new" as const },
-              { name: "Cruz Verde", color: "#00A651", status: "soon" as const },
-              { name: "Salcobrand", color: "#005DAA", status: "soon" as const },
-              { name: "Ahumada", color: "#E4002B", status: "soon" as const },
+              { name: "Cruz Verde", color: "#00A651", status: "new" as const },
+              { name: "Salcobrand", color: "#005DAA", status: "new" as const },
+              { name: "Ahumada", color: "#E4002B", status: "new" as const },
             ].map((c) => (
               <div
                 key={c.name}
