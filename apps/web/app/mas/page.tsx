@@ -64,9 +64,7 @@ export default async function MasPage() {
                 className="flex items-center gap-2 rounded-xl bg-neutral-50 px-3 py-2 text-sm"
               >
                 <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />
-                <span className={c.status !== "soon" ? "font-medium" : "text-neutral-400"}>
-                  {c.name}
-                </span>
+                <span className="font-medium">{c.name}</span>
                 {c.status === "live" && (
                   <span className="ml-auto text-[10px] font-bold text-emerald-600">
                     ACTIVO
@@ -76,9 +74,6 @@ export default async function MasPage() {
                   <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
                     NUEVO
                   </span>
-                )}
-                {c.status === "soon" && (
-                  <span className="ml-auto text-[10px] text-neutral-400">PRONTO</span>
                 )}
               </div>
             ))}

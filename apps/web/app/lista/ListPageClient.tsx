@@ -3,31 +3,29 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useList } from "../../components/ListContext";
 import type { ProductRow } from "../../lib/queries";
+import type { ChainTotal } from "../api/lista-comparar/route";
 
 function formatCLP(n: number) {
   return `$${n.toLocaleString("es-CL")}`;
-}
-
-interface SubtotalByChain {
-  chainSlug: string;
-  chainName: string;
-  chainColor: string;
-  total: number;
-  itemCount: number;
 }
 
 export function ListPageClient() {
   const { list, setQty, removeFromList, clearList, hydrated } = useList();
   const [products, setProducts] = useState<ProductRow[] | null>(null);
   const [tip, setTip] = useState<string | null>(null);
+  const [chainComparison, setChainComparison] = useState<ChainTotal[] | null>(null);
+  const [comparingChains, setComparingChains] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
     if (list.length === 0) {
       setProducts([]);
+      setChainComparison(null);
       return;
     }
     const ids = list.map((e) => e.id);
+    const items = list.map((e) => ({ id: e.id, qty: e.qty }));
+
     fetch("/api/products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -36,9 +34,22 @@ export function ListPageClient() {
       .then((r) => r.json())
       .then((data) => {
         setProducts(data.products);
-        // Pedir tip de ahorro si la lista tiene 3+ productos
+
+        // Comparativa entre cadenas (siempre, con 1+ producto)
+        setComparingChains(true);
+        setChainComparison(null);
+        fetch("/api/lista-comparar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items }),
+        })
+          .then((r) => r.json())
+          .then((d) => setChainComparison(d.chains ?? []))
+          .catch(() => setChainComparison([]))
+          .finally(() => setComparingChains(false));
+
+        // Tip IA si hay 3+ productos
         if (list.length >= 3) {
-          const items = list.map((e) => ({ id: e.id, qty: e.qty }));
           fetch("/api/lista-tip", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -87,30 +98,22 @@ export function ListPageClient() {
     );
   }
 
-  // Compute subtotals per chain
-  const byChain: Map<string, SubtotalByChain> = new Map();
-  for (const entry of list) {
+  // Total actual de la lista tal como está (productos elegidos por el usuario)
+  const grandTotal = list.reduce((sum, entry) => {
     const product = products.find((p) => p.id === entry.id);
-    if (!product) continue;
-    const key = product.chainSlug;
-    const current = byChain.get(key) ?? {
-      chainSlug: product.chainSlug,
-      chainName: product.chainName,
-      chainColor: product.chainColor,
-      total: 0,
-      itemCount: 0,
-    };
-    current.total += product.price * entry.qty;
-    current.itemCount += entry.qty;
-    byChain.set(key, current);
-  }
-  const subtotals = Array.from(byChain.values()).sort((a, b) => a.total - b.total);
-  const grandTotal = subtotals.reduce((s, c) => s + c.total, 0);
+    return sum + (product ? product.price * entry.qty : 0);
+  }, 0);
 
   // Missing products (no longer in DB or not fetched)
   const inListIds = new Set(list.map((e) => e.id));
   const fetchedIds = new Set(products.map((p) => p.id));
   const missingIds = [...inListIds].filter((id) => !fetchedIds.has(id));
+
+  // Cadenas de la comparativa con cobertura completa o alta
+  const fullCoverage = chainComparison?.filter((c) => c.covered === c.totalItems) ?? [];
+  const bestChain = fullCoverage[0] ?? chainComparison?.[0] ?? null;
+  const worstChain = fullCoverage.length > 1 ? fullCoverage[fullCoverage.length - 1] : null;
+  const maxSavings = bestChain && worstChain ? worstChain.total - bestChain.total : 0;
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-4 sm:px-6 sm:pt-6">
@@ -128,53 +131,111 @@ export function ListPageClient() {
         )}
       </div>
 
-      {/* Resumen / comparativa */}
-      {subtotals.length > 0 && (
-        <section className="mt-4 rounded-3xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-5 text-white shadow-lg">
-          <div className="text-xs font-semibold uppercase tracking-wider text-emerald-100">
-            Total de tu lista
+      {/* Resumen total */}
+      <section className="mt-4 rounded-3xl bg-gradient-to-br from-emerald-600 to-emerald-800 p-5 text-white shadow-lg">
+        <div className="text-xs font-semibold uppercase tracking-wider text-emerald-200">
+          Total de tu lista
+        </div>
+        <div className="mt-1 text-4xl font-bold">{formatCLP(grandTotal)}</div>
+        <p className="mt-1 text-sm text-emerald-100">
+          {list.reduce((s, e) => s + e.qty, 0)} producto{list.reduce((s, e) => s + e.qty, 0) !== 1 ? "s" : ""}
+        </p>
+        {tip && (
+          <div className="mt-3 rounded-2xl bg-yellow-300/90 px-3 py-2.5 text-sm font-medium text-yellow-900">
+            💡 {tip}
           </div>
-          <div className="mt-1 text-4xl font-bold">{formatCLP(grandTotal)}</div>
-          <p className="mt-1 text-sm text-emerald-50">
-            {list.reduce((s, e) => s + e.qty, 0)} productos · {subtotals.length} cadena
-            {subtotals.length > 1 ? "s" : ""}
-          </p>
-          {tip && (
-            <div className="mt-4 rounded-2xl bg-yellow-300/90 px-3 py-2.5 text-sm font-medium text-yellow-900">
-              💡 {tip}
-            </div>
-          )}
-          {subtotals.length > 1 && (
-            <div className="mt-4 space-y-2">
-              {subtotals.map((s, i) => (
-                <div
-                  key={s.chainSlug}
-                  className="flex items-center justify-between rounded-2xl bg-white/15 px-3 py-2 backdrop-blur"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ background: s.chainColor }}
-                    />
-                    <span className="font-medium">{s.chainName}</span>
-                    <span className="text-xs text-emerald-100">
-                      ({s.itemCount} prod.)
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold">{formatCLP(s.total)}</span>
-                    {i === 0 && subtotals.length > 1 && (
-                      <span className="rounded-full bg-yellow-300 px-2 py-0.5 text-[10px] font-bold text-yellow-900">
-                        🏆 más barato
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+        )}
+      </section>
+
+      {/* Comparativa entre cadenas */}
+      <section className="mt-4 rounded-3xl bg-white p-5 ring-1 ring-neutral-200">
+        <h2 className="text-base font-bold">¿Dónde sale más barata tu lista?</h2>
+        <p className="mt-0.5 text-xs text-neutral-500">
+          Comparamos los mismos productos en cada cadena
+        </p>
+
+        {/* Cargando */}
+        {comparingChains && (
+          <div className="mt-4 space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-12 animate-pulse rounded-2xl bg-neutral-100" />
+            ))}
+          </div>
+        )}
+
+        {/* Resultados */}
+        {!comparingChains && chainComparison !== null && (
+          <>
+            {chainComparison.length === 0 ? (
+              <p className="mt-4 text-sm text-neutral-500">
+                No encontramos los mismos productos en otras cadenas todavía.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-2">
+                {chainComparison.map((c, i) => {
+                  const isBest = i === 0;
+                  const diff = c.total - (chainComparison[0]?.total ?? 0);
+                  const partial = c.covered < c.totalItems;
+                  return (
+                    <div
+                      key={c.chainSlug}
+                      className={`flex items-center justify-between rounded-2xl px-4 py-3 ${
+                        isBest
+                          ? "bg-emerald-50 ring-1 ring-emerald-200"
+                          : "bg-neutral-50 ring-1 ring-neutral-200"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className="h-3 w-3 shrink-0 rounded-full"
+                          style={{ background: c.chainColor }}
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5 font-semibold">
+                            {c.chainName}
+                            {isBest && chainComparison.length > 1 && (
+                              <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                                🏆 más barato
+                              </span>
+                            )}
+                          </div>
+                          {partial && (
+                            <div className="text-[10px] text-neutral-400">
+                              {c.covered} de {c.totalItems} productos encontrados
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-lg font-bold ${isBest ? "text-emerald-700" : "text-neutral-700"}`}>
+                          {formatCLP(c.total)}
+                        </div>
+                        {!isBest && diff > 0 && (
+                          <div className="text-[11px] text-red-500">
+                            +{formatCLP(diff)} más caro
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {maxSavings > 0 && (
+              <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
+                💰 Comprando en <strong>{bestChain?.chainName}</strong> en vez de{" "}
+                <strong>{worstChain?.chainName}</strong> ahorras{" "}
+                <strong>{formatCLP(maxSavings)}</strong> en esta lista.
+              </div>
+            )}
+
+            <p className="mt-3 text-[11px] text-neutral-400">
+              Los precios son por similitud de nombre. Algunos productos pueden no ser exactamente iguales entre cadenas.
+            </p>
+          </>
+        )}
+      </section>
 
       {/* Productos */}
       <section className="mt-5 space-y-3">
