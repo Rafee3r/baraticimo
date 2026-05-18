@@ -110,6 +110,65 @@ function relevanceScore(row: ProductRow, query: string): number {
 }
 
 /**
+ * Palabras que indican que el producto es para MASCOTAS.
+ * Si la query no es de mascotas pero el producto sí lo es → filtrar.
+ *
+ * Esto evita que "pollo" devuelva "Alimento perro sabor pollo".
+ */
+const PET_KEYWORDS = [
+  "perro", "perros", "perra", "perras", "perruno", "perruna",
+  "gato", "gatos", "gata", "gatas", "gatuno", "felino", "felina",
+  "cachorro", "cachorros", "canino", "canina",
+  "mascota", "mascotas",
+];
+
+/** Patrones de "alimento balanceado" para mascotas en frases típicas. */
+const PET_PHRASE_RE = /\b(alimento|comida|snack|balanceado|croquetas?)\s+(de\s+|para\s+)?(perro|perra|gato|gata|cachorro|mascota|canino|felino|adulto)/i;
+
+function isPetProduct(name: string): boolean {
+  const n = normalizeStr(name);
+  if (PET_PHRASE_RE.test(n)) return true;
+  return PET_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`).test(n));
+}
+
+function isPetQuery(query: string): boolean {
+  const q = normalizeStr(query);
+  return PET_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`).test(q)) ||
+    /\b(croquetas?|balanceado)\b/i.test(q);
+}
+
+/**
+ * Filtra resultados de baja calidad cuando existen resultados de alta calidad.
+ * Reglas:
+ *  - Si la query no es de mascotas, descarta productos de mascotas (siempre).
+ *  - Si el mejor score es >= 70 (match de calidad), descarta scores < 30.
+ */
+function filterIrrelevant(rows: ProductRow[], query: string): ProductRow[] {
+  if (rows.length === 0) return rows;
+  const queryIsPet = isPetQuery(query);
+
+  let filtered = queryIsPet ? rows : rows.filter((r) => !isPetProduct(r.name));
+
+  const words = query.trim().split(/\s+/).filter((w) => w.length >= 2);
+  const scoreOf = (r: ProductRow) => {
+    if (words.length === 0) return 0;
+    if (words.length === 1) return relevanceScore(r, words[0]!);
+    return words.reduce((s, w) => s + relevanceScore(r, w), 0) / words.length;
+  };
+
+  const maxScore = filtered.reduce((m, r) => Math.max(m, scoreOf(r)), 0);
+  if (maxScore >= 70) {
+    filtered = filtered.filter((r) => scoreOf(r) >= 30);
+  }
+
+  // Fallback: si filtramos todo (caso raro), devolver al menos algo
+  if (filtered.length === 0 && rows.length > 0) {
+    return queryIsPet ? rows : rows.filter((r) => !isPetProduct(r.name)).slice(0, 5);
+  }
+  return filtered;
+}
+
+/**
  * Ordena resultados por relevancia posicional + descuento como desempate.
  * Se usa en todas las búsquedas cuando el sort es "relevance".
  */
@@ -282,6 +341,11 @@ export async function searchProducts(
   }
 
   let rows = cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
+
+  // Filtrar resultados irrelevantes (mascotas cuando no se pide, baja relevancia
+  // cuando hay matches buenos disponibles)
+  rows = filterIrrelevant(rows, q);
+
   if (opts.sort === "price_asc") rows = rows.sort((a, b) => a.price - b.price);
   else if (opts.sort === "price_desc") rows = rows.sort((a, b) => b.price - a.price);
   else if (opts.sort === "discount") rows = rows.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
@@ -427,7 +491,10 @@ export async function searchProductsByKeywords(
       orderBy: { lastSeenAt: "desc" },
     });
     const andRows = andCps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
-    if (andRows.length >= 4) return sortByRelevance(andRows, keywords.join(" "));
+    if (andRows.length >= 4) {
+      const cleanAnd = filterIrrelevant(andRows, keywords.join(" "));
+      return sortByRelevance(cleanAnd, keywords.join(" "));
+    }
 
     // AND dio pocos resultados — completar con OR pero priorizando los AND
     const orCps = await prisma.chainProduct.findMany({
@@ -447,7 +514,8 @@ export async function searchProductsByKeywords(
     // Merge: resultados AND primero, luego OR sin duplicados, todo por relevancia
     const seen = new Set(andRows.map((r) => r.id));
     const merged = [...andRows, ...orRows.filter((r) => !seen.has(r.id))];
-    return sortByRelevance(merged, keywords.join(" ")).slice(0, opts.limit ?? 80);
+    const cleanMerged = filterIrrelevant(merged, keywords.join(" "));
+    return sortByRelevance(cleanMerged, keywords.join(" ")).slice(0, opts.limit ?? 80);
   }
 
   // Con 1 sola keyword usar OR normal (incluye name + brand)
@@ -464,7 +532,8 @@ export async function searchProductsByKeywords(
     orderBy: { lastSeenAt: "desc" },
   });
   const rows = cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
-  return sortByRelevance(rows, keywords[0] ?? "");
+  const clean = filterIrrelevant(rows, keywords[0] ?? "");
+  return sortByRelevance(clean, keywords[0] ?? "");
 }
 
 /** Cadenas con al menos 1 producto (para filtros de búsqueda). */
