@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Header } from "../components/Header";
 import { BottomNav } from "../components/BottomNav";
 import { ListProvider } from "../components/ListContext";
+import { AuthSessionProvider } from "../components/AuthSessionProvider";
 
 export const metadata: Metadata = {
   title: {
@@ -52,13 +53,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body>
-        <ListProvider>
-          <Header />
-          <div className="pb-24 md:pb-0">
-            {children}
-          </div>
-          <BottomNav />
-        </ListProvider>
+        <AuthSessionProvider>
+          <ListProvider>
+            <Header />
+            <div className="pb-24 md:pb-0">
+              {children}
+            </div>
+            <BottomNav />
+          </ListProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );

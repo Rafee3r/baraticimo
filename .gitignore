@@ -16,3 +16,4 @@ coverage/
 
 # Prisma
 infra/prisma/migrations/dev.db*
+apps/web/tsconfig.tsbuildinfo

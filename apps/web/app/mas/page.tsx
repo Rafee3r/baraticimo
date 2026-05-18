@@ -52,12 +52,12 @@ export default async function MasPage() {
             {[
               { name: "Jumbo", color: "#00873A", status: "live" as const },
               { name: "Santa Isabel", color: "#E60028", status: "live" as const },
-              { name: "Tottus", color: "#FFB81C", status: "new" as const },
-              { name: "Líder", color: "#0071CE", status: "new" as const },
-              { name: "Unimarc", color: "#003DA5", status: "new" as const },
-              { name: "Cruz Verde", color: "#00A651", status: "new" as const },
-              { name: "Salcobrand", color: "#005DAA", status: "new" as const },
-              { name: "Ahumada", color: "#E4002B", status: "new" as const },
+              { name: "Tottus", color: "#FFB81C", status: "live" as const },
+              { name: "Líder", color: "#0071CE", status: "live" as const },
+              { name: "Unimarc", color: "#003DA5", status: "live" as const },
+              { name: "Cruz Verde", color: "#00A651", status: "live" as const },
+              { name: "Salcobrand", color: "#005DAA", status: "live" as const },
+              { name: "Ahumada", color: "#E4002B", status: "live" as const },
             ].map((c) => (
               <div
                 key={c.name}
@@ -65,16 +65,9 @@ export default async function MasPage() {
               >
                 <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />
                 <span className="font-medium">{c.name}</span>
-                {c.status === "live" && (
-                  <span className="ml-auto text-[10px] font-bold text-emerald-600">
-                    ACTIVO
-                  </span>
-                )}
-                {c.status === "new" && (
-                  <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
-                    NUEVO
-                  </span>
-                )}
+                <span className="ml-auto text-[10px] font-bold text-emerald-600">
+                  ACTIVO
+                </span>
               </div>
             ))}
           </div>
