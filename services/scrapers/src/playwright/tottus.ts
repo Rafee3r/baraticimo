@@ -140,39 +140,68 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
   });
 }
 
+async function autoScroll(page: Page) {
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      let totalHeight = 0;
+      const distance = 600;
+      const timer = setInterval(() => {
+        const scrollHeight = document.body.scrollHeight;
+        window.scrollBy(0, distance);
+        totalHeight += distance;
+        if (totalHeight >= scrollHeight) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 250);
+    });
+  });
+  await page.waitForTimeout(1000);
+}
+
 async function scrapeCategory(
   page: Page,
   category: string,
 ): Promise<ExtractedProduct[]> {
-  const url = `${BASE_URL}/${category}`;
-  console.log(`  → ${url}`);
+  const MAX_PAGES = 5;
+  const all: ExtractedProduct[] = [];
+  const seen = new Set<string>();
 
-  const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  if (!res || !res.ok()) {
-    console.log(`    HTTP ${res?.status()} — skip`);
-    return [];
+  for (let pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
+    const url = pageNum === 1
+      ? `${BASE_URL}/${category}`
+      : `${BASE_URL}/${category}?page=${pageNum}`;
+    console.log(`  → ${url}`);
+
+    const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    if (!res || !res.ok()) {
+      console.log(`    HTTP ${res?.status()} — stop pagination`);
+      break;
+    }
+
+    try {
+      await page.waitForFunction(
+        () => document.querySelectorAll('a[href*="/p"]').length >= 3,
+        { timeout: 30_000 },
+      );
+    } catch {
+      console.log(`    sin productos — stop pagination`);
+      break;
+    }
+
+    await page.waitForTimeout(2000);
+    await autoScroll(page);
+
+    const products = await extractFromPage(page);
+    const fresh = products.filter((p) => !seen.has(p.externalId));
+    fresh.forEach((p) => seen.add(p.externalId));
+    all.push(...fresh);
+    console.log(`    p${pageNum}: ${products.length} extraídos, ${fresh.length} nuevos`);
+    if (fresh.length === 0) break;
   }
 
-  // Esperar a que aparezcan productos — cualquier link a /p
-  try {
-    await page.waitForFunction(
-      () =>
-        document.querySelectorAll('a[href*="/p"]').length >= 3,
-      { timeout: 30_000 },
-    );
-  } catch {
-    console.log(`    sin productos — skip`);
-    return [];
-  }
-
-  // Scroll para cargar lazy-loaded products
-  await page.waitForTimeout(2000);
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2));
-  await page.waitForTimeout(1500);
-
-  const products = await extractFromPage(page);
-  console.log(`    ✓ ${products.length} productos`);
-  return products;
+  console.log(`    ✓ ${all.length} productos totales en ${category}`);
+  return all;
 }
 
 async function persistProducts(products: ExtractedProduct[]) {

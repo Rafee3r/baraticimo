@@ -114,27 +114,62 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
   });
 }
 
-async function scrapeCategory(page: Page, baseUrl: string, category: string): Promise<ExtractedProduct[]> {
-  const url = `${baseUrl}/${category}`;
-  console.log(`  → ${url}`);
-  const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  if (!res || !res.ok()) {
-    console.log(`    HTTP ${res?.status()} — skip`);
-    return [];
-  }
-  try {
-    await page.waitForSelector('[class*="product-card-name"]', { timeout: 30_000 });
-  } catch {
-    console.log(`    no product cards rendered — skip`);
-    return [];
-  }
-  await page.waitForTimeout(2500);
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2));
-  await page.waitForTimeout(1500);
+/** Scroll progresivo hasta el final, dando tiempo al lazy-load. */
+async function autoScroll(page: Page) {
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      let totalHeight = 0;
+      const distance = 600;
+      const timer = setInterval(() => {
+        const scrollHeight = document.body.scrollHeight;
+        window.scrollBy(0, distance);
+        totalHeight += distance;
+        if (totalHeight >= scrollHeight) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 250);
+    });
+  });
+  await page.waitForTimeout(1000);
+}
 
-  const products = await extractFromPage(page);
-  console.log(`    ✓ ${products.length} productos extraídos`);
-  return products;
+async function scrapeCategory(page: Page, baseUrl: string, category: string): Promise<ExtractedProduct[]> {
+  const MAX_PAGES = 5;
+  const all: ExtractedProduct[] = [];
+  const seen = new Set<string>();
+
+  for (let pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
+    const url = pageNum === 1
+      ? `${baseUrl}/${category}`
+      : `${baseUrl}/${category}?page=${pageNum}`;
+    console.log(`  → ${url}`);
+    const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    if (!res || !res.ok()) {
+      console.log(`    HTTP ${res?.status()} — stop pagination`);
+      break;
+    }
+    try {
+      await page.waitForSelector('[class*="product-card-name"]', { timeout: 30_000 });
+    } catch {
+      console.log(`    no product cards rendered — stop pagination`);
+      break;
+    }
+    await page.waitForTimeout(2000);
+    await autoScroll(page);
+
+    const products = await extractFromPage(page);
+    const fresh = products.filter((p) => !seen.has(p.externalId));
+    fresh.forEach((p) => seen.add(p.externalId));
+    all.push(...fresh);
+    console.log(`    p${pageNum}: ${products.length} extraídos, ${fresh.length} nuevos`);
+
+    // Si no hay productos nuevos en esta página, probablemente llegamos al final
+    if (fresh.length === 0) break;
+  }
+
+  console.log(`    ✓ ${all.length} productos totales en ${category}`);
+  return all;
 }
 
 async function persistProducts(chainSlug: string, baseUrl: string, products: ExtractedProduct[]) {
