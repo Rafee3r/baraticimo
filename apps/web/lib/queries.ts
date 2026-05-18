@@ -37,6 +37,7 @@ const CHAIN_COLORS: Record<string, string> = {
   "santa-isabel": "#E60028",
   tottus: "#FFB81C",
   unimarc: "#003DA5",
+  acuenta: "#FF6B00",
   "cruz-verde": "#00A651",
   salcobrand: "#005DAA",
   ahumada: "#E4002B",

@@ -15,6 +15,7 @@ export const CHAINS: ChainSeed[] = [
   { slug: "santa-isabel", name: "Santa Isabel", kind: "SUPERMARKET", websiteUrl: "https://www.santaisabel.cl", logoUrl: null },
   { slug: "tottus", name: "Tottus", kind: "SUPERMARKET", websiteUrl: "https://www.tottus.cl", logoUrl: null },
   { slug: "unimarc", name: "Unimarc", kind: "SUPERMARKET", websiteUrl: "https://www.unimarc.cl", logoUrl: null },
+  { slug: "acuenta", name: "Acuenta", kind: "SUPERMARKET", websiteUrl: "https://www.acuenta.cl", logoUrl: null },
   // Farmacias
   { slug: "cruz-verde", name: "Cruz Verde", kind: "PHARMACY", websiteUrl: "https://www.cruzverde.cl", logoUrl: null },
   { slug: "salcobrand", name: "Salcobrand", kind: "PHARMACY", websiteUrl: "https://www.salcobrand.cl", logoUrl: null },

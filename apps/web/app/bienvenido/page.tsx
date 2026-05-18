@@ -63,7 +63,7 @@ export default async function BienvenidoPage() {
         <div className="mx-auto mt-10 grid max-w-2xl grid-cols-3 gap-3 sm:gap-6">
           <Stat label="Productos" value={productCount} />
           <Stat label="En oferta hoy" value={saleCount} accent />
-          <Stat label="Cadenas" value="8" />
+          <Stat label="Cadenas" value="9" />
         </div>
       </section>
 
@@ -124,7 +124,7 @@ export default async function BienvenidoPage() {
             <Benefit
               emoji="🏪"
               title="8 cadenas en un solo lugar"
-              text="Jumbo, Líder, Santa Isabel, Tottus, Unimarc, Cruz Verde, Salcobrand y Ahumada."
+              text="Jumbo, Líder, Santa Isabel, Tottus, Unimarc, Acuenta, Cruz Verde, Salcobrand y Ahumada."
             />
             <Benefit
               emoji="📈"

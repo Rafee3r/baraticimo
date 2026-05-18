@@ -57,6 +57,7 @@ const CHAIN_DOMAINS: Record<string, string> = {
   lider: "www.lider.cl",
   tottus: "www.tottus.cl",
   unimarc: "www.unimarc.cl",
+  acuenta: "www.acuenta.cl",
   "cruz-verde": "www.cruzverde.cl",
   salcobrand: "www.salcobrand.cl",
   ahumada: "www.ahumada.cl",

@@ -55,6 +55,7 @@ export default async function MasPage() {
               { name: "Tottus", color: "#FFB81C", status: "live" as const },
               { name: "Líder", color: "#0071CE", status: "live" as const },
               { name: "Unimarc", color: "#003DA5", status: "live" as const },
+              { name: "Acuenta", color: "#FF6B00", status: "live" as const },
               { name: "Cruz Verde", color: "#00A651", status: "live" as const },
               { name: "Salcobrand", color: "#005DAA", status: "live" as const },
               { name: "Ahumada", color: "#E4002B", status: "live" as const },
