@@ -15,19 +15,22 @@ const USER_AGENT =
 
 const BASE_URL = "https://www.unimarc.cl";
 
+// URLs reales de unimarc.cl (verificadas con Playwright)
 const CATEGORIES = [
-  "despensa",
-  "lacteos",
-  "bebidas",
-  "frutas-y-verduras",
-  "carnes-y-aves",
-  "congelados",
-  "panaderia-y-pasteleria",
-  "snacks-y-dulces",
-  "limpieza",
-  "cuidado-personal",
-  "mascotas",
-  "bebes",
+  "category/despensa",
+  "category/lacteos-huevos-y-refrigerados",
+  "category/quesos-y-fiambres",
+  "category/frutas-y-verduras",
+  "category/carnes",
+  "category/panaderia-y-pasteleria",
+  "category/congelados",
+  "category/desayuno-y-dulces",
+  "category/bebidas-y-licores",
+  "category/limpieza",
+  "category/perfumeria",
+  "category/bebes-y-ninos",
+  "category/mascotas",
+  "category/hogar",
 ];
 
 interface ExtractedProduct {
@@ -43,7 +46,8 @@ interface ExtractedProduct {
 
 async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
   return page.evaluate(() => {
-    const productHrefRe = /\/p\/?(\?.*)?$/i;
+    // Unimarc usa /product/<nombre>
+    const productHrefRe = /\/product\//i;
 
     function parsePrice(s: string): number | null {
       const m = s.match(/\$\s?([\d.,]+)/);
@@ -169,7 +173,7 @@ async function scrapeCategory(page: Page, category: string): Promise<ExtractedPr
 
     try {
       await page.waitForFunction(
-        () => document.querySelectorAll('a[href*="/p"]').length >= 3,
+        () => document.querySelectorAll('a[href*="/product/"]').length >= 3,
         { timeout: 30_000 },
       );
     } catch {

@@ -15,19 +15,20 @@ const USER_AGENT =
 
 const BASE_URL = "https://www.tottus.cl";
 
+// Tottus usa URLs estilo /tottus-cl/lista/CATG<id>/<name>
+// Los IDs CATG son numéricos y específicos por categoría
 const CATEGORIES = [
-  "despensa",
-  "lacteos",
-  "bebidas",
-  "frutas-y-verduras",
-  "carnes-y-aves",
-  "congelados",
-  "panaderia",
-  "snacks-y-dulces",
-  "limpieza",
-  "cuidado-personal",
-  "mascotas",
-  "bebes",
+  "tottus-cl/lista/CATG27055/Despensa",
+  "tottus-cl/lista/CATG27139/Lacteos-y-Quesos",
+  "tottus-cl/lista/CATG24752/Liquidos",
+  "tottus-cl/lista/CATG27070/Frutas-y-Verduras",
+  "tottus-cl/lista/CATG27069/Carnes",
+  "tottus-cl/lista/CATG27073/Congelados",
+  "tottus-cl/lista/CATG27142/Pasteleria",
+  "tottus-cl/lista/CATG27074/Aseo-y-Limpieza",
+  "tottus-cl/lista/CATG24761/Mascotas",
+  "tottus-cl/lista/CATG24802/Panales-y-Toallas-Humedas",
+  "tottus-cl/lista/CATG27084/Vinos-y-Licores",
 ];
 
 interface ExtractedProduct {
@@ -43,7 +44,8 @@ interface ExtractedProduct {
 
 async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
   return page.evaluate(() => {
-    const productHrefRe = /\/p\/?(\?.*)?$/i;
+    // Tottus: /tottus-cl/articulo/<id1>/<slug>/<id2>
+    const productHrefRe = /\/tottus-cl\/articulo\//i;
 
     function parsePrice(s: string): number | null {
       const m = s.match(/\$\s?([\d.,]+)/);
@@ -119,10 +121,11 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
         img?.getAttribute("src") ?? img?.getAttribute("data-src") ?? null;
 
       seen.add(cleanHref);
-      const externalId = cleanHref
-        .replace(/^\//, "")
-        .replace(/\/p\/?$/, "")
-        .replace(/[/?#]/g, "_");
+      // Tottus: /tottus-cl/articulo/<id1>/<slug>/<id2> → id externo = id1
+      const idMatch = cleanHref.match(/\/articulo\/(\d+)/);
+      const externalId = idMatch
+        ? idMatch[1]!
+        : cleanHref.replace(/^\//, "").replace(/[/?#]/g, "_");
 
       out.push({
         externalId,
@@ -181,7 +184,7 @@ async function scrapeCategory(
 
     try {
       await page.waitForFunction(
-        () => document.querySelectorAll('a[href*="/p"]').length >= 3,
+        () => document.querySelectorAll('a[href*="/articulo/"]').length >= 3,
         { timeout: 30_000 },
       );
     } catch {
