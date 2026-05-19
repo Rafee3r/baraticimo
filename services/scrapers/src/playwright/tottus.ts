@@ -166,14 +166,14 @@ async function scrapeCategory(
   page: Page,
   category: string,
 ): Promise<ExtractedProduct[]> {
-  const MAX_PAGES = 5;
+  const MAX_PAGES = 8;
   const all: ExtractedProduct[] = [];
   const seen = new Set<string>();
 
   for (let pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
-    const url = pageNum === 1
-      ? `${BASE_URL}/${category}`
-      : `${BASE_URL}/${category}?page=${pageNum}`;
+    // Tottus exige &store=to_com en TODAS las páginas (incluso p1)
+    // sino devuelve 403 para p2+
+    const url = `${BASE_URL}/${category}?page=${pageNum}&store=to_com`;
     console.log(`  → ${url}`);
 
     const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });

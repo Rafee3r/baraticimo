@@ -592,7 +592,7 @@ export async function searchProductsByKeywords(
 /** Cadenas con al menos 1 producto (para filtros de búsqueda). */
 export async function getChainsWithProducts() {
   return prisma.chain.findMany({
-    where: { chainProducts: { some: {} } },
+    where: { isActive: true, chainProducts: { some: {} } },
     select: { slug: true, name: true },
     orderBy: { name: "asc" },
   });
