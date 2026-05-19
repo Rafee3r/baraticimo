@@ -86,19 +86,44 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
         const t = (nameEl.textContent ?? "").trim();
         if (t.length > 5 && t.length < 200 && !/^\$/.test(t)) name = t;
       }
-      // Fallback: texto más largo en la card
-      if (!name) {
+      // Filtro de "esto NO es un nombre, es un precio promocional"
+      const looksLikePrice = (t: string): boolean =>
+        /\$\s*[\d.,]/.test(t) ||
+        /\bc\/u\b/i.test(t) ||
+        /\bx\s+(kg|gr|g|ml|l|lt|un|unidad)\b/i.test(t) ||
+        /^[\s\n]*\d+\s*x\s*\$/i.test(t) ||
+        /lleva\s+\d+\s+y\s+paga/i.test(t);
+
+      // Fallback: texto más largo en la card (excluyendo textos que parecen precio)
+      if (!name || looksLikePrice(name)) {
         const textNodes = Array.from(card.querySelectorAll("*"))
           .map((el) => el.textContent?.trim() ?? "")
-          .filter((t) => t.length > 8 && t.length < 200 && !/^\$/.test(t) && !/^\d+$/.test(t));
+          .filter((t) =>
+            t.length > 8 &&
+            t.length < 200 &&
+            !/^\$/.test(t) &&
+            !/^\d+$/.test(t) &&
+            !looksLikePrice(t),
+          );
         name = textNodes.sort((a, b) => b.length - a.length)[0];
+      }
+      if (!name) {
+        // Último recurso: el slug de la URL → "Carozzi Spaghetti"
+        const slug = cleanHref.replace(/^.*\/product\//, "").replace(/[-_]+/g, " ").trim();
+        if (slug && slug.length > 3) {
+          name = slug.split(" ")
+            .map((w) => (w.length > 0 ? w[0]!.toUpperCase() + w.slice(1) : w))
+            .join(" ");
+        }
       }
       if (!name) continue;
 
       // Limpiar prefijo "Agregar<marca-lowercase>" pegado al nombre real.
       // Ej: "AgregarmerkatAtun lomitos" → "Atun lomitos"
       //     "Agregarnuestra cocinaPasta cabello" → "Pasta cabello"
-      name = name.replace(/^Agregar[a-záéíóúñ\s&\.]+(?=[A-ZÁÉÍÓÚÑ])/i, "").trim();
+      //     "Agregarno+glutenPan de molde" → "Pan de molde"
+      // IMPORTANTE: sin flag /i — el lookahead debe matchear SOLO mayúsculas.
+      name = name.replace(/^Agregar[a-záéíóúñ0-9+\s&.\-]+?(?=[A-ZÁÉÍÓÚÑ])/, "").trim();
       // Quitar duplicación final de formato: "400 gr400 g" → "400 g"
       name = name.replace(/(\d+\s*[a-zA-Z]+)\s*\1\s*$/i, "$1").trim();
 
