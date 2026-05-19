@@ -14,6 +14,7 @@ const BASE_URL = "https://www.salcobrand.cl";
 
 // Salcobrand usa /t/<slug> para categorías (verificado con Playwright)
 const CATEGORIES = [
+  "t/medicamentos",
   "t/dermocoaching",
   "t/cuidado-personal",
   "t/vitaminas-y-suplementos",

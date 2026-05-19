@@ -51,4 +51,8 @@ export const CATEGORIES: Category[] = [
     slug: "mascotas", name: "Mascotas", emoji: "🐾", keyword: "perro",
     keywords: ["perro", "gato", "gatito", "alimento perro", "alimento gato", "whiskas", "pedigree", "cat chow", "master cat", "champion dog", "felix", "purina", "mascota"],
   },
+  {
+    slug: "farmacia", name: "Farmacia", emoji: "💊", keyword: "ibuprofeno",
+    keywords: ["ibuprofeno", "paracetamol", "aspirina", "kitadol", "tapsin", "vitamina", "suplemento", "jarabe", "comprimido", "antialérgico", "antiácido", "omeprazol", "loratadina"],
+  },
 ];

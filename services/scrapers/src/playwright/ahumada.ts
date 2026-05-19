@@ -11,6 +11,7 @@ const BASE_URL = "https://www.farmaciasahumada.cl";
 
 // Categorías reales (verificadas con Playwright) — Ahumada usa slugs sin prefijo
 const CATEGORIES = [
+  "medicamentos",
   "dermocosmetica",
   "dermocosmetica/rostro",
   "dermocosmetica/cuerpo",

@@ -15,6 +15,7 @@ const BASE_URL = "https://www.cruzverde.cl";
 
 // Categorías reales en cruzverde.cl (verificadas con Playwright)
 const CATEGORIES = [
+  "medicamentos",
   "dermocosmetica",
   "infantil-y-mama",
   "vitaminas-y-suplementos",

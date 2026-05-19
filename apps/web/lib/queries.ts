@@ -261,20 +261,29 @@ function sortByRelevance(rows: ProductRow[], query: string): ProductRow[] {
 const STOPWORDS = new Set([
   "agregar", "comprar", "para", "con", "sin", "del", "los", "las",
   "una", "uno", "esta", "este", "esa", "ese", "que", "por", "tu", "de", "el", "la",
+  "neto", "drenado", "envase", "botella", "lata", "bolsa", "tarro", "frasco",
+  "paquete", "caja", "pack", "set", "bote", "doypack", "doy",
 ]);
 
 function dedupKey(name: string): string {
-  return normalizeStr(name)
-    // Quitar prefijo "Agregar<marca-lowercase>" si quedó pegado
+  // Palabras "significativas" del producto: marca + nombre + tipo.
+  // Las normalizamos y ORDENAMOS alfabéticamente para que el orden no importe:
+  // "Atún Robinson Lomito" y "Lomito Atún Robinson" generan la misma key.
+  const words = normalizeStr(name)
     .replace(/^agregar[a-z\s]+?(?=[a-z]{4,})/i, "")
-    // Quitar formatos: 1kg, 500g, 1.5l, 12 un, pack x4, etc.
     .replace(/\b\d+([.,]\d+)?\s*(kg|g|ml|l|lt|cc|gr|un|pack|x\s*\d+|grs|litros?|kilos?|gramos?|mililitros?|cm)\b/gi, "")
-    .replace(/\b\d+\s*x\s*\d+\b/gi, "") // packs "6 x 350"
+    .replace(/\b\d+\s*x\s*\d+\b/gi, "")
     .replace(/[^\w\s]/g, " ")
     .split(/\s+/)
-    .filter((w) => w.length >= 3 && !STOPWORDS.has(w))
-    .slice(0, 5)
-    .join(" ");
+    .filter((w) => w.length >= 4 && !STOPWORDS.has(w));
+
+  // Tomar las 4 palabras más significativas (las más largas, después de filtrar stopwords),
+  // ordenadas alfabéticamente para tolerar orden distinto.
+  const significant = words
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 4)
+    .sort();
+  return significant.join(" ");
 }
 
 /**

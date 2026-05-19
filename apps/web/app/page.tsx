@@ -13,7 +13,7 @@ import { ComparisonCard } from "../components/ComparisonCard";
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [stats, topDeals, crossChainDeals, lacteos, carnes, frutasVerduras] =
+  const [stats, topDeals, crossChainDeals, lacteos, carnes, frutasVerduras, farmacia] =
     await Promise.all([
       getStats(),
       getFeaturedProducts(10),
@@ -21,6 +21,7 @@ export default async function HomePage() {
       getOffersByCategory("lacteos", 8),
       getOffersByCategory("carnes", 8),
       getOffersByCategory("frutas-verduras", 8),
+      getOffersByCategory("farmacia", 8),
     ]);
 
   return (
@@ -68,6 +69,7 @@ export default async function HomePage() {
       <SectionRow title="🥛 Lácteos" link="/buscar?cat=lacteos" products={lacteos} />
       <SectionRow title="🥩 Carnes" link="/buscar?cat=carnes" products={carnes} />
       <SectionRow title="🥬 Frutas y verduras" link="/buscar?cat=frutas-verduras" products={frutasVerduras} />
+      <SectionRow title="💊 Farmacia" link="/buscar?cat=farmacia" products={farmacia} />
     </main>
   );
 }
