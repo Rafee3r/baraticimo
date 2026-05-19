@@ -35,3 +35,63 @@ main {
 .no-scrollbar {
   scrollbar-width: none;
 }
+
+/* ─────────── Animaciones UI 3.0 ─────────── */
+
+/* Shimmer suave para skeletons */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(229, 229, 229, 0.5) 25%,
+    rgba(245, 245, 245, 0.8) 50%,
+    rgba(229, 229, 229, 0.5) 75%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* Fade-in al entrar a la página */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Top progress bar */
+@keyframes progressIndeterminate {
+  0% { transform: translateX(-100%) scaleX(0.3); }
+  50% { transform: translateX(0) scaleX(0.6); }
+  100% { transform: translateX(100%) scaleX(0.3); }
+}
+.progress-indeterminate {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #10b981, #34d399, #10b981);
+  z-index: 60;
+  transform-origin: left;
+  animation: progressIndeterminate 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Toast (notificación efímera) */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.toast-enter {
+  animation: toastIn 0.25s ease-out;
+}
+
+/* Pulso suave para elementos interactivos */
+@keyframes softPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.soft-pulse { animation: softPulse 1.8s ease-in-out infinite; }

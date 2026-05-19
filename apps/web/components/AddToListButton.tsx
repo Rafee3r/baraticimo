@@ -1,5 +1,6 @@
 "use client";
 import { useList } from "./ListContext";
+import { useToast } from "./Toaster";
 
 interface Props {
   productId: string;
@@ -8,6 +9,7 @@ interface Props {
 
 export function AddToListButton({ productId, size = "lg" }: Props) {
   const { inList, addToList, setQty, hydrated } = useList();
+  const { toast } = useToast();
   if (!hydrated) return null;
   const qty = inList(productId);
 
@@ -19,6 +21,7 @@ export function AddToListButton({ productId, size = "lg" }: Props) {
           e.preventDefault();
           e.stopPropagation();
           addToList(productId, 1);
+          toast("Agregado a tu lista");
         }}
         className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-900 font-semibold text-white transition active:scale-[0.98] ${
           size === "lg" ? "py-3.5 text-base" : "px-3 py-1.5 text-xs"

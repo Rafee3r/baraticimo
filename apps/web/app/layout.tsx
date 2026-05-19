@@ -1,9 +1,12 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Header } from "../components/Header";
 import { BottomNav } from "../components/BottomNav";
 import { ListProvider } from "../components/ListContext";
 import { AuthSessionProvider } from "../components/AuthSessionProvider";
+import { ToastProvider } from "../components/Toaster";
+import { NavigationProgress } from "../components/NavigationProgress";
 
 export const metadata: Metadata = {
   title: {
@@ -54,13 +57,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body>
         <AuthSessionProvider>
-          <ListProvider>
-            <Header />
-            <div className="pb-24 md:pb-0">
-              {children}
-            </div>
-            <BottomNav />
-          </ListProvider>
+          <ToastProvider>
+            <ListProvider>
+              <Suspense fallback={null}>
+                <NavigationProgress />
+              </Suspense>
+              <Header />
+              <div className="pb-24 md:pb-0 fade-in-up">
+                {children}
+              </div>
+              <BottomNav />
+            </ListProvider>
+          </ToastProvider>
         </AuthSessionProvider>
       </body>
     </html>
