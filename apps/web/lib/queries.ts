@@ -27,6 +27,8 @@ export interface ProductRow {
   scrapedAt: string;
   ahorro: number | null;
   ahorroPct: number | null;
+  /** Categoría asignada por IA (lacteos, carnes, mascotas, bebes, ...). */
+  category: string | null;
   /** Mismo producto en otras cadenas, ordenado de más barato a más caro */
   otherPrices?: OtherPrice[];
 }
@@ -73,6 +75,7 @@ function rowFromChainProduct(cp: any): ProductRow | null {
     scrapedAt: latest.scrapedAt.toISOString(),
     ahorro,
     ahorroPct,
+    category: cp.category ?? null,
   };
 }
 
@@ -149,11 +152,14 @@ const BABY_FOOD_KEYWORDS = [
 
 const BABY_FOOD_PHRASE_RE = /\b(comida|alimento|colado|picado|papilla)\s+(de\s+|para\s+)?(bebe|bebés|infantil)/i;
 
-function isPetProduct(name: string): boolean {
-  const n = normalizeStr(name);
+function isPetProduct(row: { name: string; category: string | null }): boolean {
+  // Si tiene categoría IA, es la fuente de verdad
+  if (row.category === "mascotas") return true;
+  if (row.category && row.category !== "mascotas") return false; // ya clasificado como otra cosa
+  // Fallback heurístico solo cuando no hay categoría
+  const n = normalizeStr(row.name);
   if (PET_PHRASE_RE.test(n)) return true;
   if (PET_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`).test(n))) return true;
-  // Marcas: matcheo más permisivo (no \b al inicio para "n&d", etc.)
   return PET_BRANDS.some((b) => n.includes(b));
 }
 
@@ -164,10 +170,11 @@ function isPetQuery(query: string): boolean {
   return /\b(croquetas?|balanceado|pellet)\b/i.test(q);
 }
 
-function isBabyFood(name: string): boolean {
-  const n = normalizeStr(name);
+function isBabyFood(row: { name: string; category: string | null }): boolean {
+  if (row.category === "bebes") return true;
+  if (row.category && row.category !== "bebes") return false;
+  const n = normalizeStr(row.name);
   if (BABY_FOOD_PHRASE_RE.test(n)) return true;
-  // "naturnes", "papilla", "colado nestlé" — palabras específicas
   return BABY_FOOD_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`).test(n));
 }
 
@@ -189,8 +196,8 @@ function filterIrrelevant(rows: ProductRow[], query: string): ProductRow[] {
   const queryIsBaby = isBabyFoodQuery(query);
 
   let filtered = rows;
-  if (!queryIsPet) filtered = filtered.filter((r) => !isPetProduct(r.name));
-  if (!queryIsBaby) filtered = filtered.filter((r) => !isBabyFood(r.name));
+  if (!queryIsPet) filtered = filtered.filter((r) => !isPetProduct(r));
+  if (!queryIsBaby) filtered = filtered.filter((r) => !isBabyFood(r));
 
   const words = query.trim().split(/\s+/).filter((w) => w.length >= 2);
   const scoreOf = (r: ProductRow) => {
@@ -207,8 +214,8 @@ function filterIrrelevant(rows: ProductRow[], query: string): ProductRow[] {
   // Fallback: si filtramos todo, devolver al menos algo decente
   if (filtered.length === 0 && rows.length > 0) {
     let fallback = rows;
-    if (!queryIsPet) fallback = fallback.filter((r) => !isPetProduct(r.name));
-    if (!queryIsBaby) fallback = fallback.filter((r) => !isBabyFood(r.name));
+    if (!queryIsPet) fallback = fallback.filter((r) => !isPetProduct(r));
+    if (!queryIsBaby) fallback = fallback.filter((r) => !isBabyFood(r));
     return fallback.slice(0, 5);
   }
   return filtered;
@@ -660,4 +667,51 @@ export async function getOffersByKeyword(keyword: string, limit = 8): Promise<Pr
       return bP - aP;
     })
     .slice(0, limit);
+}
+
+/**
+ * Productos destacados de una categoría real (el campo `category` clasificado por IA).
+ * Reemplaza a getOffersByKeyword cuando hay categorías disponibles — es más preciso
+ * porque no depende de matchear texto en el nombre.
+ */
+export async function getOffersByCategory(category: string, limit = 8): Promise<ProductRow[]> {
+  const cps = await prisma.chainProduct.findMany({
+    where: { category },
+    include: {
+      chain: true,
+      prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
+    },
+    take: 80,
+    orderBy: { lastSeenAt: "desc" },
+  });
+  return cps
+    .map(rowFromChainProduct)
+    .filter((r): r is ProductRow => r !== null)
+    .sort((a, b) => {
+      // Ofertas con descuento primero, luego ordenado por % ahorro
+      if (a.isOnSale !== b.isOnSale) return a.isOnSale ? -1 : 1;
+      return (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0);
+    })
+    .slice(0, limit);
+}
+
+/** Búsqueda por categoría real (no por keyword). */
+export async function searchByCategory(
+  category: string,
+  opts: { limit?: number; inStoreOnly?: boolean; chainSlug?: string } = {},
+): Promise<ProductRow[]> {
+  const cps = await prisma.chainProduct.findMany({
+    where: {
+      category,
+      ...(opts.inStoreOnly ? { isOnlineOnly: false } : {}),
+      ...(opts.chainSlug ? { chain: { slug: opts.chainSlug } } : {}),
+    },
+    include: {
+      chain: true,
+      prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
+    },
+    take: opts.limit ?? 200,
+    orderBy: { lastSeenAt: "desc" },
+  });
+  return cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
 }

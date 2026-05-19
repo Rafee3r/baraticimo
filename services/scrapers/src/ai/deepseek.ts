@@ -127,6 +127,86 @@ export async function batchMatchProducts(
   return result;
 }
 
+// ─── Batch categorizer ──────────────────────────────────────────────────────
+
+export const CATEGORIES_LIST = [
+  "despensa",
+  "lacteos",
+  "carnes",
+  "frutas-verduras",
+  "bebidas",
+  "snacks",
+  "congelados",
+  "limpieza",
+  "belleza",
+  "bebes",
+  "mascotas",
+  "farmacia",
+  "panaderia",
+  "desayuno",
+  "otros",
+] as const;
+
+export type ProductCategory = (typeof CATEGORIES_LIST)[number];
+
+const CATEGORIZE_SYSTEM = `Eres un clasificador de productos de supermercado y farmacia en Chile.
+
+Para cada producto te llega su nombre. Asígnale UNA categoría de esta lista exacta:
+
+- despensa: arroz, fideos, aceites, salsas, conservas (atún), harina, azúcar, sal, vinagre
+- lacteos: leche, yogurt, queso, mantequilla, crema, manjar, quesillo
+- carnes: carne vacuna, pollo, cerdo, pavo, pescado, mariscos, embutidos, longanizas, jamón
+- frutas-verduras: frutas y verduras frescas (no congeladas, no en conserva)
+- bebidas: jugo, bebida, agua, energéticas, cerveza, vino, licor
+- snacks: galletas, chocolate, dulces, papas fritas, ramitas, frutos secos, alfajores
+- congelados: helados, papas fritas congeladas, nuggets, pre-cocidos, pizzas congeladas
+- limpieza: detergentes, jabones, cloro, lavaloza, papel higiénico, toallitas, suavizantes
+- belleza: shampoo, acondicionador, cremas faciales/corporales, maquillaje, desodorantes, perfumes
+- bebes: pañales, papillas, colados, leche infantil, biberones, toallitas húmedas
+- mascotas: alimento para perros/gatos, snacks de mascotas, accesorios pet
+- farmacia: vitaminas, suplementos, medicamentos, dermocosmética farmacéutica, protector solar farmacia
+- panaderia: pan, masas, repostería, queques, tortas
+- desayuno: cereales, café, té, mermeladas, mieles, granolas
+- otros: cualquier producto que no calce claramente en las anteriores
+
+Responde SOLO con JSON válido: {"items":[{"idx":0,"category":"lacteos"},...]}`;
+
+interface CategorizeInput {
+  idx: number;
+  name: string;
+  brand?: string | null;
+}
+
+/**
+ * Clasifica un batch de productos en categorías. Procesa ~80 productos por llamada.
+ * Usa el context window grande de DeepSeek v4 para eficiencia.
+ */
+export async function batchCategorize(
+  products: CategorizeInput[],
+): Promise<Map<number, ProductCategory>> {
+  if (products.length === 0) return new Map();
+
+  const userContent = JSON.stringify(
+    products.map((p) => ({ idx: p.idx, name: p.name, brand: p.brand ?? null })),
+  );
+
+  const raw = await callDeepSeek(CATEGORIZE_SYSTEM, userContent);
+  const parsed = z
+    .object({
+      items: z.array(
+        z.object({
+          idx: z.number(),
+          category: z.enum(CATEGORIES_LIST),
+        }),
+      ),
+    })
+    .parse(JSON.parse(raw));
+
+  const result = new Map<number, ProductCategory>();
+  for (const item of parsed.items) result.set(item.idx, item.category);
+  return result;
+}
+
 /**
  * Matcher: dados un chain_product (nombre/marca/formato) y un set de
  * productos canonicos candidatos, decide cual hace match.

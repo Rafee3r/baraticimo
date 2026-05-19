@@ -89,6 +89,10 @@ model ChainProduct {
   // Confianza del match IA (0-1); null si aun no se intento matchear
   matchConfidence Float?
   needsReview     Boolean  @default(false)
+  // Categoría asignada por IA. Una de:
+  // despensa, lacteos, carnes, frutas-verduras, bebidas, snacks, congelados,
+  // limpieza, belleza, bebes, mascotas, farmacia, panaderia, desayuno, otros
+  category   String?
   lastSeenAt DateTime  @default(now())
 
   prices     Price[]
@@ -96,6 +100,7 @@ model ChainProduct {
   @@unique([chainId, externalId])
   @@index([productId])
   @@index([needsReview])
+  @@index([category])
 }
 
 enum PriceSource {

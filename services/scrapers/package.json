@@ -9,6 +9,7 @@
     "scrape:tottus": "tsx src/playwright/tottus.ts",
     "scrape:unimarc": "tsx src/playwright/unimarc.ts",
     "scrape:acuenta": "tsx src/playwright/acuenta.ts",
+    "categorize": "tsx src/categorize-all.ts",
     "scrape:lider": "tsx src/playwright/lider.ts",
     "scrape:cruz-verde": "tsx src/playwright/cruz-verde.ts",
     "scrape:salcobrand": "tsx src/playwright/salcobrand.ts",

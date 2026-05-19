@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { searchProducts, searchProductsByKeywords, getChainsWithProducts, dedupResults } from "../../lib/queries";
+import { searchProducts, searchByCategory, getChainsWithProducts, dedupResults } from "../../lib/queries";
 import { smartSearch } from "../../lib/ai-search";
 import { SearchInput } from "../../components/SearchInput";
 import { ProductCard } from "../../components/ProductCard";
@@ -35,12 +35,14 @@ export default async function SearchPage({ searchParams }: Props) {
   let aiUsed = false;
 
   if (category) {
-    // Búsqueda por categoría: OR amplio sobre todos los keywords de la categoría
-    const allRows = await searchProductsByKeywords(category.keywords, {
+    // Filtra por el campo `category` real de la DB (clasificado por IA).
+    // Es MUCHO más preciso que buscar palabras en el nombre.
+    const allRows = await searchByCategory(category.slug, {
       limit: 200,
       inStoreOnly,
+      chainSlug: cadena,
     });
-    let sorted = cadena ? allRows.filter((r) => r.chainSlug === cadena) : allRows;
+    let sorted = allRows;
     if (sortVal === "price_asc") sorted = sorted.sort((a, b) => a.price - b.price);
     else if (sortVal === "price_desc") sorted = sorted.sort((a, b) => b.price - a.price);
     else if (sortVal === "discount") sorted = sorted.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));

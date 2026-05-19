@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   getFeaturedProducts,
-  getOffersByKeyword,
+  getOffersByCategory,
   getStats,
   getTopCrossChainDeals,
 } from "../lib/queries";
@@ -13,52 +13,43 @@ import { ComparisonCard } from "../components/ComparisonCard";
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [topDeals, stats, crossChainDeals, lacteos, despensa, bebidas, snacks, limpieza, mascotas] =
+  const [stats, topDeals, crossChainDeals, lacteos, carnes, frutasVerduras] =
     await Promise.all([
-      getFeaturedProducts(10),
       getStats(),
+      getFeaturedProducts(10),
       getTopCrossChainDeals(4).catch(() => []),
-      getOffersByKeyword("leche", 8),
-      getOffersByKeyword("arroz", 8),
-      getOffersByKeyword("bebida", 8),
-      getOffersByKeyword("snack", 8),
-      getOffersByKeyword("detergente", 8),
-      getOffersByKeyword("mascota", 8),
+      getOffersByCategory("lacteos", 8),
+      getOffersByCategory("carnes", 8),
+      getOffersByCategory("frutas-verduras", 8),
     ]);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 sm:pt-6">
-      {/* Hero */}
-      <section className="rounded-3xl bg-gradient-to-br from-emerald-700 to-emerald-900 p-5 shadow-lg sm:p-7">
-        <h1 className="text-xl font-bold leading-tight tracking-tight text-white sm:text-2xl">
-          Compara precios en supermercados y farmacias
-        </h1>
-        <p className="mt-1 text-sm text-emerald-200">
+    <main className="mx-auto max-w-5xl px-4 pt-3 sm:px-6 sm:pt-5">
+      {/* Hero compacto — solo lo esencial */}
+      <section className="rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-900 p-4 shadow-md sm:p-5">
+        <p className="text-xs font-medium text-emerald-200">
           {stats.productCount.toLocaleString("es-CL")} productos ·{" "}
-          <span className="font-semibold text-white">{stats.saleCount.toLocaleString("es-CL")} en oferta hoy</span>
+          <span className="text-white">{stats.saleCount.toLocaleString("es-CL")} en oferta</span>
         </p>
-        <div className="mt-4">
-          <SearchInput size="lg" />
+        <h1 className="mt-1 text-lg font-bold text-white sm:text-xl">
+          Compara y ahorra en tu compra
+        </h1>
+        <div className="mt-3">
+          <SearchInput size="md" />
         </div>
       </section>
 
-      {/* Categorías */}
-      <section className="mt-6">
+      {/* Categorías como pills */}
+      <section className="mt-4">
         <CategoryRow />
       </section>
 
-      {/* Comparativas entre cadenas */}
+      {/* Comparativas cross-chain */}
       {crossChainDeals.length > 0 && (
-        <section className="mt-8">
-          <div className="mb-3 flex items-baseline justify-between">
-            <div>
-              <h2 className="text-lg font-bold sm:text-xl">💰 Mismo producto, distinto precio</h2>
-              <p className="text-xs text-neutral-500">Lo que cambia de cadena puede ahorrarte</p>
-            </div>
-            <Link
-              href="/comparar"
-              className="text-sm font-medium text-emerald-600 hover:underline"
-            >
+        <section className="mt-6">
+          <div className="mb-2.5 flex items-baseline justify-between">
+            <h2 className="text-base font-bold sm:text-lg">💰 Mismo producto, distinto precio</h2>
+            <Link href="/comparar" className="text-sm font-medium text-emerald-600 hover:underline">
               Ver más →
             </Link>
           </div>
@@ -70,87 +61,13 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Top ofertas */}
-      <SectionRow title="🔥 Top ofertas hoy" link="/buscar" products={topDeals} />
+      {/* Top ofertas hoy */}
+      <SectionRow title="🔥 Top ofertas" link="/buscar?ofertas=1" products={topDeals} />
 
-      {/* Lácteos */}
-      <SectionRow
-        title="🥛 Lácteos"
-        link="/buscar?q=leche"
-        products={lacteos}
-      />
-
-      {/* Despensa */}
-      <SectionRow
-        title="🛒 Despensa"
-        link="/buscar?q=arroz"
-        products={despensa}
-      />
-
-      {/* Bebidas */}
-      <SectionRow
-        title="🥤 Bebidas"
-        link="/buscar?q=bebida"
-        products={bebidas}
-      />
-
-      {/* Snacks */}
-      <SectionRow
-        title="🍿 Snacks y dulces"
-        link="/buscar?q=snack"
-        products={snacks}
-      />
-
-      {/* Limpieza */}
-      <SectionRow
-        title="🧴 Limpieza"
-        link="/buscar?q=detergente"
-        products={limpieza}
-      />
-
-      {/* Mascotas */}
-      <SectionRow
-        title="🐾 Mascotas"
-        link="/buscar?q=mascota"
-        products={mascotas}
-      />
-
-      {/* Cómo funciona */}
-      <section className="mt-10 rounded-3xl bg-white p-5 ring-1 ring-neutral-200">
-        <h2 className="text-base font-bold">¿Cómo funciona?</h2>
-        <ol className="mt-3 space-y-2.5 text-sm text-neutral-700">
-          <li className="flex gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-              1
-            </span>
-            <span>
-              <strong>Busca</strong> los productos que sueles comprar (ej: leche, pañales)
-            </span>
-          </li>
-          <li className="flex gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-              2
-            </span>
-            <span>
-              <strong>Agrégalos a tu lista</strong> con el botón "🛒 Agregar a mi lista"
-            </span>
-          </li>
-          <li className="flex gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-              3
-            </span>
-            <span>
-              <strong>Mira el total</strong> en cada cadena, y compra donde sea más barato
-            </span>
-          </li>
-        </ol>
-      </section>
-
-      {/* Footer disclaimer */}
-      <p className="mt-6 rounded-2xl bg-amber-50 px-4 py-3 text-xs text-amber-900 ring-1 ring-amber-200">
-        <strong>Importante:</strong> los precios son de los sitios web. En tienda
-        física pueden diferir.
-      </p>
+      {/* Categorías de productos clasificados por IA — NO matching por texto */}
+      <SectionRow title="🥛 Lácteos" link="/buscar?cat=lacteos" products={lacteos} />
+      <SectionRow title="🥩 Carnes" link="/buscar?cat=carnes" products={carnes} />
+      <SectionRow title="🥬 Frutas y verduras" link="/buscar?cat=frutas-verduras" products={frutasVerduras} />
     </main>
   );
 }
@@ -166,17 +83,13 @@ function SectionRow({
 }) {
   if (products.length === 0) return null;
   return (
-    <section className="mt-8">
-      <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-lg font-bold sm:text-xl">{title}</h2>
-        <Link
-          href={link}
-          className="text-sm font-medium text-emerald-600 hover:underline"
-        >
+    <section className="mt-6">
+      <div className="mb-2.5 flex items-baseline justify-between">
+        <h2 className="text-base font-bold sm:text-lg">{title}</h2>
+        <Link href={link} className="text-sm font-medium text-emerald-600 hover:underline">
           Ver más →
         </Link>
       </div>
-      {/* Horizontal scroll en todos los tamaños — patrón de app */}
       <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar sm:mx-0 sm:px-0">
         {products.map((p) => (
           <div key={p.id} className="w-32 shrink-0 sm:w-40">
