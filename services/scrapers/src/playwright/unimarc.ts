@@ -77,11 +77,30 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
         if (card.querySelector("img") && /\$\s?[\d.,]+/.test(card.textContent ?? "")) break;
       }
 
-      const textNodes = Array.from(card.querySelectorAll("*"))
-        .map((el) => el.textContent?.trim() ?? "")
-        .filter((t) => t.length > 8 && t.length < 200 && !/^\$/.test(t) && !/^\d+$/.test(t));
-      const name = textNodes.sort((a, b) => b.length - a.length)[0];
+      // Buscar primero elementos típicos de nombre (h2/h3/clases name/title)
+      let name: string | undefined;
+      const nameEl = card.querySelector(
+        'h2, h3, h4, [class*="name" i]:not(button), [class*="title" i]:not(button), [class*="product"][class*="text" i]',
+      );
+      if (nameEl) {
+        const t = (nameEl.textContent ?? "").trim();
+        if (t.length > 5 && t.length < 200 && !/^\$/.test(t)) name = t;
+      }
+      // Fallback: texto más largo en la card
+      if (!name) {
+        const textNodes = Array.from(card.querySelectorAll("*"))
+          .map((el) => el.textContent?.trim() ?? "")
+          .filter((t) => t.length > 8 && t.length < 200 && !/^\$/.test(t) && !/^\d+$/.test(t));
+        name = textNodes.sort((a, b) => b.length - a.length)[0];
+      }
       if (!name) continue;
+
+      // Limpiar prefijo "Agregar<marca-lowercase>" pegado al nombre real.
+      // Ej: "AgregarmerkatAtun lomitos" → "Atun lomitos"
+      //     "Agregarnuestra cocinaPasta cabello" → "Pasta cabello"
+      name = name.replace(/^Agregar[a-záéíóúñ\s&\.]+(?=[A-ZÁÉÍÓÚÑ])/i, "").trim();
+      // Quitar duplicación final de formato: "400 gr400 g" → "400 g"
+      name = name.replace(/(\d+\s*[a-zA-Z]+)\s*\1\s*$/i, "$1").trim();
 
       const allText = card.textContent ?? "";
       const allPrices = Array.from(allText.matchAll(/\$\s?[\d.,]+/g))

@@ -253,12 +253,26 @@ function sortByRelevance(rows: ProductRow[], query: string): ProductRow[] {
  * Elimina formatos (1kg, 500ml), números sueltos y puntuación.
  * Toma las primeras 5 palabras significativas como clave de grupo.
  */
+/**
+ * Stopwords y prefijos basura comunes en nombres de productos scrapeados.
+ * Se quitan ANTES de generar la clave de dedup para que el mismo producto
+ * en distintas cadenas matchee aunque venga con texto extra.
+ */
+const STOPWORDS = new Set([
+  "agregar", "comprar", "para", "con", "sin", "del", "los", "las",
+  "una", "uno", "esta", "este", "esa", "ese", "que", "por", "tu", "de", "el", "la",
+]);
+
 function dedupKey(name: string): string {
   return normalizeStr(name)
-    .replace(/\b\d+\s*(kg|g|ml|l|lt|cc|gr|un|pack|x\s*\d+)\b/gi, "") // quitar formatos
+    // Quitar prefijo "Agregar<marca-lowercase>" si quedó pegado
+    .replace(/^agregar[a-z\s]+?(?=[a-z]{4,})/i, "")
+    // Quitar formatos: 1kg, 500g, 1.5l, 12 un, pack x4, etc.
+    .replace(/\b\d+([.,]\d+)?\s*(kg|g|ml|l|lt|cc|gr|un|pack|x\s*\d+|grs|litros?|kilos?|gramos?|mililitros?|cm)\b/gi, "")
+    .replace(/\b\d+\s*x\s*\d+\b/gi, "") // packs "6 x 350"
     .replace(/[^\w\s]/g, " ")
     .split(/\s+/)
-    .filter((w) => w.length >= 3)
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(w))
     .slice(0, 5)
     .join(" ");
 }
@@ -324,7 +338,49 @@ export async function getFeaturedProducts(limit = 12): Promise<ProductRow[]> {
   return rows;
 }
 
-/** Búsqueda case-insensitive en el nombre + marca. */
+/**
+ * Busca IDs de ChainProduct cuyo nombre (sin acentos, lowercase) contenga TODOS los
+ * términos dados (AND). Usa f_unaccent + ILIKE para tolerar tildes:
+ * 'atun' matchea 'atún' y viceversa.
+ */
+async function findIdsByTerms(
+  terms: string[],
+  opts: { inStoreOnly?: boolean; chainSlug?: string; limit: number },
+): Promise<string[]> {
+  if (terms.length === 0) return [];
+
+  const conditions: string[] = [];
+  const params: any[] = [];
+
+  for (const t of terms) {
+    params.push(`%${t.toLowerCase()}%`);
+    conditions.push(
+      `(public.f_unaccent(lower(cp.name)) LIKE public.f_unaccent($${params.length}) OR ` +
+      `public.f_unaccent(lower(coalesce(cp.brand, ''))) LIKE public.f_unaccent($${params.length}))`
+    );
+  }
+
+  let where = conditions.join(" AND ");
+  if (opts.inStoreOnly) where += ` AND cp."isOnlineOnly" = false`;
+  if (opts.chainSlug) {
+    params.push(opts.chainSlug);
+    where += ` AND c.slug = $${params.length}`;
+  }
+
+  params.push(opts.limit);
+  const limitParam = `$${params.length}`;
+
+  const rows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+    `SELECT cp.id FROM "ChainProduct" cp JOIN "Chain" c ON c.id = cp."chainId"
+     WHERE ${where}
+     ORDER BY cp."lastSeenAt" DESC
+     LIMIT ${limitParam}`,
+    ...params,
+  );
+  return rows.map((r) => r.id);
+}
+
+/** Búsqueda con unaccent (tildes-insensible) en nombre + marca. */
 export async function searchProducts(
   query: string,
   opts: {
@@ -337,6 +393,63 @@ export async function searchProducts(
   const q = query.trim();
   if (!q) return [];
 
+  const include = {
+    chain: true,
+    prices: { orderBy: { scrapedAt: "desc" as const }, take: 1 },
+  };
+
+  const words = q.split(/\s+/).filter((w) => w.length >= 2);
+  const limit = opts.limit ?? 30;
+  let ids: string[];
+
+  if (words.length >= 2) {
+    // Intentar AND: todas las palabras presentes
+    ids = await findIdsByTerms(words, { ...opts, limit });
+    if (ids.length < 2) {
+      // Fallback: frase exacta como una sola term
+      ids = await findIdsByTerms([q], { ...opts, limit });
+    }
+  } else {
+    ids = await findIdsByTerms([q], { ...opts, limit });
+  }
+
+  // Cargar productos completos con include
+  const cps = ids.length > 0
+    ? await prisma.chainProduct.findMany({
+        where: { id: { in: ids } },
+        include,
+      })
+    : [];
+  // Mantener orden por lastSeenAt (el orden de IDs)
+  const order = new Map(ids.map((id, i) => [id, i]));
+  cps.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+
+  // Si no hubo resultados con el query, return early
+  if (cps.length === 0) {
+    return [];
+  }
+
+  // Saltar el bloque legacy de findMany abajo, salir aquí:
+  let rows = cps.map(rowFromChainProduct).filter((r): r is ProductRow => r !== null);
+  rows = filterIrrelevant(rows, q);
+  if (opts.sort === "price_asc") rows = rows.sort((a, b) => a.price - b.price);
+  else if (opts.sort === "price_desc") rows = rows.sort((a, b) => b.price - a.price);
+  else if (opts.sort === "discount") rows = rows.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
+  else rows = sortByRelevance(rows, q);
+  return rows;
+}
+
+// ── Búsqueda legacy (sin unaccent) — la dejo deshabilitada por refactor arriba.
+async function _legacy_searchProducts_unused(
+  query: string,
+  opts: {
+    limit?: number;
+    inStoreOnly?: boolean;
+    sort?: "relevance" | "price_asc" | "price_desc" | "discount";
+    chainSlug?: string;
+  } = {},
+): Promise<ProductRow[]> {
+  const q = query.trim();
   const base = {
     ...(opts.inStoreOnly ? { isOnlineOnly: false } : {}),
     ...(opts.chainSlug ? { chain: { slug: opts.chainSlug } } : {}),
@@ -345,12 +458,8 @@ export async function searchProducts(
     chain: true,
     prices: { orderBy: { scrapedAt: "desc" as const }, take: 1 },
   };
-
-  // Si hay múltiples palabras, intentar AND primero (todas las palabras en el nombre).
-  // Esto da resultados mucho más precisos para búsquedas como "leche chocolate".
   const words = q.split(/\s+/).filter((w) => w.length >= 2);
   let cps: any[];
-
   if (words.length >= 2) {
     const andCps = await prisma.chainProduct.findMany({
       where: {
@@ -364,7 +473,6 @@ export async function searchProducts(
     if (andCps.length >= 2) {
       cps = andCps;
     } else {
-      // Fallback a búsqueda de frase exacta
       cps = await prisma.chainProduct.findMany({
         where: {
           OR: [
