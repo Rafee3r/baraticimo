@@ -8,7 +8,7 @@ export function CategoryRow() {
         {CATEGORIES.map((c) => (
           <li key={c.slug} className="shrink-0">
             <Link
-              href={`/buscar?q=${encodeURIComponent(c.keyword)}`}
+              href={`/buscar?cat=${c.slug}`}
               className="flex w-20 flex-col items-center gap-1.5 rounded-2xl bg-white p-3 ring-1 ring-neutral-200 transition active:scale-95 hover:ring-emerald-500 sm:w-auto"
             >
               <span className="text-3xl leading-none">{c.emoji}</span>

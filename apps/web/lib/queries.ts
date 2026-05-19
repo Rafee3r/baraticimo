@@ -114,41 +114,83 @@ function relevanceScore(row: ProductRow, query: string): number {
  * Palabras que indican que el producto es para MASCOTAS.
  * Si la query no es de mascotas pero el producto sí lo es → filtrar.
  *
- * Esto evita que "pollo" devuelva "Alimento perro sabor pollo".
+ * Incluye diminutivos en español ("gatito", "perrito") y razas comunes.
  */
 const PET_KEYWORDS = [
   "perro", "perros", "perra", "perras", "perruno", "perruna",
+  "perrito", "perritos", "perrita", "perritas",
   "gato", "gatos", "gata", "gatas", "gatuno", "felino", "felina",
-  "cachorro", "cachorros", "canino", "canina",
+  "gatito", "gatitos", "gatita", "gatitas",
+  "cachorro", "cachorros", "cachorrito", "cachorrita",
+  "canino", "canina", "caninos", "caninas",
   "mascota", "mascotas",
 ];
 
+/** Marcas conocidas de comida de mascotas. */
+const PET_BRANDS = [
+  "whiskas", "pedigree", "cat chow", "master cat", "champion dog",
+  "felix", "friskies", "royal canin", "hill", "hills", "purina",
+  "eukanuba", "iams", "doko", "sieger", "master dog", "kibbles",
+  "fancy feast", "kit cat", "nutro", "n&d", "proplan", "pro plan",
+  "dog chow", "cat's life", "bekia", "fit 32", "max cat", "max dog",
+  "agility", "ki-e-ki", "balanced", "champion", "fitnatura",
+];
+
 /** Patrones de "alimento balanceado" para mascotas en frases típicas. */
-const PET_PHRASE_RE = /\b(alimento|comida|snack|balanceado|croquetas?)\s+(de\s+|para\s+)?(perro|perra|gato|gata|cachorro|mascota|canino|felino|adulto)/i;
+const PET_PHRASE_RE = /\b(alimento|comida|snack|balanceado|croquetas?|pellet|paté|pate)\s+(de\s+|para\s+)?(perro|perra|gato|gata|cachorro|gatito|perrito|mascota|canino|felino|adulto|adulta)/i;
+
+/**
+ * Palabras que indican producto de COMIDA PARA BEBÉ (papillas, coladitos).
+ * Tarros chiquitos con verduras/carne que no son la "carne" que busca un adulto.
+ */
+const BABY_FOOD_KEYWORDS = [
+  "papilla", "papillas", "colado", "picado", "naturnes",
+];
+
+const BABY_FOOD_PHRASE_RE = /\b(comida|alimento|colado|picado|papilla)\s+(de\s+|para\s+)?(bebe|bebés|infantil)/i;
 
 function isPetProduct(name: string): boolean {
   const n = normalizeStr(name);
   if (PET_PHRASE_RE.test(n)) return true;
-  return PET_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`).test(n));
+  if (PET_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`).test(n))) return true;
+  // Marcas: matcheo más permisivo (no \b al inicio para "n&d", etc.)
+  return PET_BRANDS.some((b) => n.includes(b));
 }
 
 function isPetQuery(query: string): boolean {
   const q = normalizeStr(query);
-  return PET_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`).test(q)) ||
-    /\b(croquetas?|balanceado)\b/i.test(q);
+  if (PET_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`).test(q))) return true;
+  if (PET_BRANDS.some((b) => q.includes(b))) return true;
+  return /\b(croquetas?|balanceado|pellet)\b/i.test(q);
+}
+
+function isBabyFood(name: string): boolean {
+  const n = normalizeStr(name);
+  if (BABY_FOOD_PHRASE_RE.test(n)) return true;
+  // "naturnes", "papilla", "colado nestlé" — palabras específicas
+  return BABY_FOOD_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`).test(n));
+}
+
+function isBabyFoodQuery(query: string): boolean {
+  const q = normalizeStr(query);
+  return /\b(bebe|bebes|bebés|infantil|papilla|colado|naturnes)\b/i.test(q);
 }
 
 /**
  * Filtra resultados de baja calidad cuando existen resultados de alta calidad.
  * Reglas:
- *  - Si la query no es de mascotas, descarta productos de mascotas (siempre).
- *  - Si el mejor score es >= 70 (match de calidad), descarta scores < 30.
+ *  - Si la query no es de mascotas, descarta productos de mascotas
+ *  - Si la query no es de bebé, descarta comida de bebé
+ *  - Si el mejor score es >= 70, descarta scores < 30
  */
 function filterIrrelevant(rows: ProductRow[], query: string): ProductRow[] {
   if (rows.length === 0) return rows;
   const queryIsPet = isPetQuery(query);
+  const queryIsBaby = isBabyFoodQuery(query);
 
-  let filtered = queryIsPet ? rows : rows.filter((r) => !isPetProduct(r.name));
+  let filtered = rows;
+  if (!queryIsPet) filtered = filtered.filter((r) => !isPetProduct(r.name));
+  if (!queryIsBaby) filtered = filtered.filter((r) => !isBabyFood(r.name));
 
   const words = query.trim().split(/\s+/).filter((w) => w.length >= 2);
   const scoreOf = (r: ProductRow) => {
@@ -162,9 +204,12 @@ function filterIrrelevant(rows: ProductRow[], query: string): ProductRow[] {
     filtered = filtered.filter((r) => scoreOf(r) >= 30);
   }
 
-  // Fallback: si filtramos todo (caso raro), devolver al menos algo
+  // Fallback: si filtramos todo, devolver al menos algo decente
   if (filtered.length === 0 && rows.length > 0) {
-    return queryIsPet ? rows : rows.filter((r) => !isPetProduct(r.name)).slice(0, 5);
+    let fallback = rows;
+    if (!queryIsPet) fallback = fallback.filter((r) => !isPetProduct(r.name));
+    if (!queryIsBaby) fallback = fallback.filter((r) => !isBabyFood(r.name));
+    return fallback.slice(0, 5);
   }
   return filtered;
 }

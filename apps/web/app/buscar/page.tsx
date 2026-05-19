@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { searchProducts, getChainsWithProducts, dedupResults } from "../../lib/queries";
+import { searchProducts, searchProductsByKeywords, getChainsWithProducts, dedupResults } from "../../lib/queries";
 import { smartSearch } from "../../lib/ai-search";
 import { SearchInput } from "../../components/SearchInput";
 import { ProductCard } from "../../components/ProductCard";
+import { CATEGORIES } from "../../lib/categories";
 
 export const revalidate = 120;
 
 type Sort = "relevance" | "price_asc" | "price_desc" | "discount";
 
 interface Props {
-  searchParams: Promise<{ q?: string; tienda?: string; ofertas?: string; sort?: string; cadena?: string }>;
+  searchParams: Promise<{ q?: string; cat?: string; tienda?: string; ofertas?: string; sort?: string; cadena?: string }>;
 }
 
 const SORTS: { value: Sort; label: string }[] = [
@@ -20,18 +21,31 @@ const SORTS: { value: Sort; label: string }[] = [
 ];
 
 export default async function SearchPage({ searchParams }: Props) {
-  const { q = "", tienda, ofertas, sort = "relevance", cadena } = await searchParams;
+  const { q = "", cat, tienda, ofertas, sort = "relevance", cadena } = await searchParams;
   const inStoreOnly = tienda === "1";
   const onlyOffers = ofertas === "1";
   const sortVal = (SORTS.find((s) => s.value === sort)?.value ?? "relevance") as Sort;
 
+  // Si viene ?cat=<slug>, buscamos por TODOS los keywords de esa categoría (OR)
+  const category = cat ? CATEGORIES.find((c) => c.slug === cat) : undefined;
+
   const chains = await getChainsWithProducts();
 
-  // Smart search: una sola llamada que maneja los 3 niveles internamente
   let results: Awaited<ReturnType<typeof searchProducts>> = [];
   let aiUsed = false;
 
-  if (q.trim()) {
+  if (category) {
+    // Búsqueda por categoría: OR amplio sobre todos los keywords de la categoría
+    const allRows = await searchProductsByKeywords(category.keywords, {
+      limit: 200,
+      inStoreOnly,
+    });
+    let sorted = cadena ? allRows.filter((r) => r.chainSlug === cadena) : allRows;
+    if (sortVal === "price_asc") sorted = sorted.sort((a, b) => a.price - b.price);
+    else if (sortVal === "price_desc") sorted = sorted.sort((a, b) => b.price - a.price);
+    else if (sortVal === "discount") sorted = sorted.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
+    results = dedupResults(sorted);
+  } else if (q.trim()) {
     // smartSearch internamente hace búsqueda directa primero (0 tokens si ≥4 resultados)
     // y sólo activa IA si los resultados son insuficientes.
     const [directCount, aiResults] = await Promise.all([
@@ -41,15 +55,12 @@ export default async function SearchPage({ searchParams }: Props) {
       ),
     ]);
 
-    // Aplicar filtros de sort y cadena encima del resultado
     let sorted = cadena ? aiResults.filter((r) => r.chainSlug === cadena) : aiResults;
     if (sortVal === "price_asc") sorted = sorted.sort((a, b) => a.price - b.price);
     else if (sortVal === "price_desc") sorted = sorted.sort((a, b) => b.price - a.price);
     else if (sortVal === "discount") sorted = sorted.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
 
-    // Dedup: fusionar el mismo producto de distintas cadenas en una sola card
     results = dedupResults(sorted);
-    // Mostrar badge IA sólo cuando la IA encontró más resultados que la búsqueda directa
     aiUsed = directCount < 4 && results.length > directCount;
   }
 
@@ -63,21 +74,29 @@ export default async function SearchPage({ searchParams }: Props) {
       <div className="sticky top-[57px] z-10 -mx-4 bg-[var(--background)] px-4 pb-3 pt-1 sm:top-[65px] sm:mx-0 sm:px-0">
         <SearchInput defaultValue={q} size="md" />
 
+        {category && (
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-2xl">{category.emoji}</span>
+            <h2 className="text-lg font-bold">{category.name}</h2>
+            <span className="text-sm text-neutral-500">· {results.length} productos</span>
+          </div>
+        )}
+
         {/* Fila 1: Filtros principales + sort */}
-        {q.trim() && results.length > 0 && (
+        {(q.trim() || category) && results.length > 0 && (
           <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
             <FilterChip
-              href={chipHref(q, { tienda, ofertas, sort, cadena })}
+              href={chipHref(q, { tienda, ofertas, sort, cadena, cat })}
               active={!inStoreOnly && !onlyOffers}
               label={`Todo · ${results.length}`}
             />
             <FilterChip
-              href={chipHref(q, { tienda, ofertas: ofertas ? undefined : "1", sort, cadena })}
+              href={chipHref(q, { tienda, ofertas: ofertas ? undefined : "1", sort, cadena, cat })}
               active={onlyOffers}
               label={`🏷️ Ofertas · ${offers}`}
             />
             <FilterChip
-              href={chipHref(q, { tienda: tienda ? undefined : "1", ofertas, sort, cadena })}
+              href={chipHref(q, { tienda: tienda ? undefined : "1", ofertas, sort, cadena, cat })}
               active={inStoreOnly}
               label={`🏪 En tienda · ${inStore}`}
             />
@@ -86,7 +105,7 @@ export default async function SearchPage({ searchParams }: Props) {
             {SORTS.filter((s) => s.value !== "relevance").map((s) => (
               <FilterChip
                 key={s.value}
-                href={chipHref(q, { tienda, ofertas, sort: s.value, cadena })}
+                href={chipHref(q, { tienda, ofertas, sort: s.value, cadena, cat })}
                 active={sortVal === s.value}
                 label={s.label}
                 variant="sort"
@@ -101,10 +120,10 @@ export default async function SearchPage({ searchParams }: Props) {
         )}
 
         {/* Fila 2: Cadenas */}
-        {q.trim() && chains.length > 0 && (
+        {(q.trim() || category) && chains.length > 0 && (
           <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
             <FilterChip
-              href={chipHref(q, { tienda, ofertas, sort })}
+              href={chipHref(q, { tienda, ofertas, sort, cat })}
               active={!cadena}
               label="Todas"
               variant="chain"
@@ -112,7 +131,7 @@ export default async function SearchPage({ searchParams }: Props) {
             {chains.map((c) => (
               <FilterChip
                 key={c.slug}
-                href={chipHref(q, { tienda, ofertas, sort, cadena: cadena === c.slug ? undefined : c.slug })}
+                href={chipHref(q, { tienda, ofertas, sort, cadena: cadena === c.slug ? undefined : c.slug, cat })}
                 active={cadena === c.slug}
                 label={c.name}
                 variant="chain"
@@ -122,7 +141,7 @@ export default async function SearchPage({ searchParams }: Props) {
         )}
       </div>
 
-      {!q.trim() && (
+      {!q.trim() && !category && (
         <div className="mt-12 text-center text-neutral-500">
           <div className="text-5xl">🔍</div>
           <p className="mt-3 text-base">¿Qué quieres comparar hoy?</p>
@@ -130,7 +149,7 @@ export default async function SearchPage({ searchParams }: Props) {
         </div>
       )}
 
-      {q.trim() && results.length === 0 && (
+      {(q.trim() || category) && results.length === 0 && (
         <div className="mt-12 rounded-2xl bg-white p-10 text-center ring-1 ring-neutral-200">
           <div className="text-5xl">🤔</div>
           <p className="mt-3 font-medium">Sin resultados para "{q}"</p>
@@ -157,8 +176,10 @@ export default async function SearchPage({ searchParams }: Props) {
   );
 }
 
-function chipHref(q: string, params: { tienda?: string; ofertas?: string; sort?: string; cadena?: string }) {
-  const u = new URLSearchParams({ q });
+function chipHref(q: string, params: { tienda?: string; ofertas?: string; sort?: string; cadena?: string; cat?: string }) {
+  const u = new URLSearchParams();
+  if (q) u.set("q", q);
+  if (params.cat) u.set("cat", params.cat);
   if (params.tienda) u.set("tienda", params.tienda);
   if (params.ofertas) u.set("ofertas", params.ofertas);
   if (params.sort && params.sort !== "relevance") u.set("sort", params.sort);
