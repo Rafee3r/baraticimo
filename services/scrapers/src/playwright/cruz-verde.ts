@@ -136,8 +136,18 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
       }
       if (listPrice && listPrice <= price) listPrice = null;
 
-      const img = card.querySelector("img");
-      const imageUrl = img?.getAttribute("src") ?? img?.getAttribute("data-src") ?? null;
+      // Filtrar imágenes que son banners promocionales, no fotos de producto.
+      // Cruz Verde superpone "ribbon-ahorra-aqui.png" sobre la foto real.
+      const BANNER_RE = /(ribbon-|ahorra-aqui|\/cms\/|banner|destacado|promo[ -_]|campaign|\/ads?[\-\/]|marketing)/i;
+      const imgs = Array.from(card.querySelectorAll("img"));
+      let imageUrl: string | null = null;
+      for (const i of imgs) {
+        const src = i.getAttribute("src") ?? i.getAttribute("data-src") ?? "";
+        if (src && !BANNER_RE.test(src)) {
+          imageUrl = src;
+          break;
+        }
+      }
 
       seen.add(cleanHref);
       // Cruz Verde: el SKU es el último número antes de .html
