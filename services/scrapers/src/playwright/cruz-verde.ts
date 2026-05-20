@@ -76,11 +76,41 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
         if (card.querySelector("img") && /\$\s?[\d.,]+/.test(card.textContent ?? "")) break;
       }
 
-      const textNodes = Array.from(card.querySelectorAll("*"))
-        .map((el) => el.textContent?.trim() ?? "")
-        .filter((t) => t.length > 8 && t.length < 200 && !/^\$/.test(t) && !/^\d+$/.test(t));
-      const name = textNodes.sort((a, b) => b.length - a.length)[0];
+      // Buscar primero un elemento que típicamente contenga SOLO el nombre
+      let name: string | undefined;
+      const nameEl = card.querySelector('h2, h3, h4, [class*="name" i]:not(button), [class*="title" i]:not(button)');
+      if (nameEl) {
+        const t = (nameEl.textContent ?? "").trim();
+        // El elemento del nombre NO debe contener precios ni descuentos
+        if (t.length > 5 && t.length < 200 && !/\$\s?\d/.test(t) && !/-\d+%/.test(t)) {
+          name = t;
+        }
+      }
+      // Fallback: texto más largo SIN precios ni "Venta directa" ni descuento
+      if (!name) {
+        const textNodes = Array.from(card.querySelectorAll("*"))
+          .map((el) => el.textContent?.trim() ?? "")
+          .filter((t) =>
+            t.length > 8 && t.length < 200 &&
+            !/^\$/.test(t) && !/^\d+$/.test(t) &&
+            !/\$\s?\d/.test(t) &&            // no contiene "$1234"
+            !/-\d+\s*%/.test(t) &&            // no contiene "-40%"
+            !/venta\s+directa/i.test(t) &&    // no contiene "Venta directa"
+            !/formato\s*:/i.test(t) &&        // no contiene "formato:"
+            !/precio\s*\w*\s*:/i.test(t)      // no contiene "Precio normal:"
+          );
+        name = textNodes.sort((a, b) => b.length - a.length)[0];
+      }
       if (!name) continue;
+      // Limpiar restos por si quedaron pegados (defensa en profundidad)
+      name = name
+        .replace(/\s*venta\s+directa.*$/i, "")
+        .replace(/\s*formato\s*:.*$/i, "")
+        .replace(/\s*precio\s*\w*\s*:.*$/i, "")
+        .replace(/\s*\$\s?\d[\d.,]*.*$/, "")  // todo desde el primer precio
+        .replace(/\s*-\d+\s*%.*$/, "")        // descuento al final
+        .trim();
+      if (name.length < 5) continue;
 
       const allText = card.textContent ?? "";
       const allPrices = Array.from(allText.matchAll(/\$\s?[\d.,]+/g))

@@ -72,11 +72,33 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
         if (card.querySelector("img") && /\$\s?[\d.,]+/.test(card.textContent ?? "")) break;
       }
 
-      const textNodes = Array.from(card.querySelectorAll("*"))
-        .map((el) => el.textContent?.trim() ?? "")
-        .filter((t) => t.length > 8 && t.length < 200 && !/^\$/.test(t) && !/^\d+$/.test(t));
-      const name = textNodes.sort((a, b) => b.length - a.length)[0];
+      let name: string | undefined;
+      const nameEl = card.querySelector('h2, h3, h4, [class*="name" i]:not(button), [class*="title" i]:not(button)');
+      if (nameEl) {
+        const t = (nameEl.textContent ?? "").trim();
+        if (t.length > 5 && t.length < 200 && !/\$\s?\d/.test(t) && !/-\d+%/.test(t)) name = t;
+      }
+      if (!name) {
+        const textNodes = Array.from(card.querySelectorAll("*"))
+          .map((el) => el.textContent?.trim() ?? "")
+          .filter((t) =>
+            t.length > 8 && t.length < 200 &&
+            !/^\$/.test(t) && !/^\d+$/.test(t) &&
+            !/\$\s?\d/.test(t) && !/-\d+\s*%/.test(t) &&
+            !/venta\s+directa/i.test(t) && !/formato\s*:/i.test(t) &&
+            !/precio\s*\w*\s*:/i.test(t)
+          );
+        name = textNodes.sort((a, b) => b.length - a.length)[0];
+      }
       if (!name) continue;
+      name = name
+        .replace(/\s*venta\s+directa.*$/i, "")
+        .replace(/\s*formato\s*:.*$/i, "")
+        .replace(/\s*precio\s*\w*\s*:.*$/i, "")
+        .replace(/\s*\$\s?\d[\d.,]*.*$/, "")
+        .replace(/\s*-\d+\s*%.*$/, "")
+        .trim();
+      if (name.length < 5) continue;
 
       const allText = card.textContent ?? "";
       const allPrices = Array.from(allText.matchAll(/\$\s?[\d.,]+/g))
