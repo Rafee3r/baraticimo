@@ -34,7 +34,7 @@ export function AddToListButton({ productId, size = "lg" }: Props) {
 
   return (
     <div
-      className={`flex items-center justify-between rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 ${
+      className={`flex items-center justify-between rounded-2xl bg-lime-50 ring-1 ring-lime-300 ${
         size === "lg" ? "px-2 py-2" : "px-1.5 py-1"
       }`}
     >
@@ -45,7 +45,7 @@ export function AddToListButton({ productId, size = "lg" }: Props) {
           e.stopPropagation();
           setQty(productId, qty - 1);
         }}
-        className={`rounded-xl bg-white font-bold text-emerald-700 ring-1 ring-emerald-200 transition active:scale-90 ${
+        className={`rounded-xl bg-white font-bold text-lime-700 ring-1 ring-lime-300 transition active:scale-90 ${
           size === "lg" ? "h-10 w-10 text-xl" : "h-7 w-7 text-sm"
         }`}
         aria-label="Quitar 1"
@@ -53,7 +53,7 @@ export function AddToListButton({ productId, size = "lg" }: Props) {
         −
       </button>
       <div
-        className={`font-bold text-emerald-700 ${
+        className={`font-bold text-lime-700 ${
           size === "lg" ? "text-lg" : "text-sm"
         }`}
       >
@@ -69,7 +69,7 @@ export function AddToListButton({ productId, size = "lg" }: Props) {
           e.stopPropagation();
           setQty(productId, qty + 1);
         }}
-        className={`rounded-xl bg-emerald-600 font-bold text-white transition active:scale-90 ${
+        className={`rounded-xl bg-neutral-900 font-bold text-white transition active:scale-90 ${
           size === "lg" ? "h-10 w-10 text-xl" : "h-7 w-7 text-sm"
         }`}
         aria-label="Agregar 1"

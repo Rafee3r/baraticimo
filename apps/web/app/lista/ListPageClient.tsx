@@ -89,7 +89,7 @@ export function ListPageClient() {
           </p>
           <Link
             href="/buscar"
-            className="mt-5 inline-block rounded-full bg-emerald-600 px-5 py-2.5 font-medium text-white"
+            className="mt-5 inline-block rounded-full bg-neutral-900 px-5 py-2.5 font-medium text-white"
           >
             Buscar productos
           </Link>
@@ -132,12 +132,12 @@ export function ListPageClient() {
       </div>
 
       {/* Resumen total */}
-      <section className="mt-4 rounded-3xl bg-gradient-to-br from-emerald-600 to-emerald-800 p-5 text-white shadow-lg">
-        <div className="text-xs font-semibold uppercase tracking-wider text-emerald-200">
+      <section className="mt-4 rounded-3xl bg-gradient-to-br from-neutral-900 to-neutral-800 p-5 text-white shadow-lg">
+        <div className="text-xs font-semibold uppercase tracking-wider text-lime-200">
           Total de tu lista
         </div>
         <div className="mt-1 text-4xl font-bold">{formatCLP(grandTotal)}</div>
-        <p className="mt-1 text-sm text-emerald-100">
+        <p className="mt-1 text-sm text-lime-100">
           {list.reduce((s, e) => s + e.qty, 0)} producto{list.reduce((s, e) => s + e.qty, 0) !== 1 ? "s" : ""}
         </p>
         {tip && (
@@ -181,7 +181,7 @@ export function ListPageClient() {
                       key={c.chainSlug}
                       className={`flex items-center justify-between rounded-2xl px-4 py-3 ${
                         isBest
-                          ? "bg-emerald-50 ring-1 ring-emerald-200"
+                          ? "bg-lime-50 ring-1 ring-lime-300"
                           : "bg-neutral-50 ring-1 ring-neutral-200"
                       }`}
                     >
@@ -194,7 +194,7 @@ export function ListPageClient() {
                           <div className="flex items-center gap-1.5 font-semibold">
                             {c.chainName}
                             {isBest && chainComparison.length > 1 && (
-                              <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                              <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-bold text-white">
                                 🏆 más barato
                               </span>
                             )}
@@ -207,7 +207,7 @@ export function ListPageClient() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className={`text-lg font-bold ${isBest ? "text-emerald-700" : "text-neutral-700"}`}>
+                        <div className={`text-lg font-bold ${isBest ? "text-lime-700" : "text-neutral-700"}`}>
                           {formatCLP(c.total)}
                         </div>
                         {!isBest && diff > 0 && (
@@ -291,7 +291,7 @@ export function ListPageClient() {
                     <span className="w-6 text-center font-bold">{entry.qty}</span>
                     <button
                       onClick={() => setQty(entry.id, entry.qty + 1)}
-                      className="h-8 w-8 rounded-lg bg-emerald-600 font-bold text-white"
+                      className="h-8 w-8 rounded-lg bg-neutral-900 font-bold text-white"
                       aria-label="Sumar"
                     >
                       +

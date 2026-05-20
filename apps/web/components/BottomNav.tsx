@@ -76,13 +76,13 @@ export function BottomNav() {
               <Link
                 href={it.href}
                 className={`flex flex-col items-center gap-0.5 px-3 py-2 text-[10px] transition ${
-                  active ? "text-emerald-600" : "text-neutral-500"
+                  active ? "text-lime-600" : "text-neutral-500"
                 }`}
               >
                 <span className="relative">
                   {it.icon(active)}
                   {it.showCount && listCount > 0 && (
-                    <span className="absolute -right-2 -top-1.5 min-w-[1.1rem] rounded-full bg-emerald-600 px-1 text-center text-[10px] font-bold leading-[1.1rem] text-white shadow">
+                    <span className="absolute -right-2 -top-1.5 min-w-[1.1rem] rounded-full bg-neutral-900 px-1 text-center text-[10px] font-bold leading-[1.1rem] text-white shadow">
                       {listCount}
                     </span>
                   )}

@@ -51,7 +51,7 @@ export function FavoritosClient() {
           </p>
           <Link
             href="/buscar"
-            className="mt-5 inline-block rounded-full bg-emerald-600 px-5 py-2.5 font-medium text-white"
+            className="mt-5 inline-block rounded-full bg-neutral-900 px-5 py-2.5 font-medium text-white"
           >
             Buscar productos
           </Link>

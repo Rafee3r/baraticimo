@@ -78,7 +78,7 @@ export function SearchInput({ defaultValue = "", size = "md", action = "/buscar"
         className="w-full"
       >
         <div
-          className={`flex items-center gap-2 rounded-2xl bg-white shadow-sm transition focus-within:shadow-md ring-1 ring-neutral-200 focus-within:ring-2 focus-within:ring-emerald-500 ${
+          className={`flex items-center gap-2 rounded-2xl bg-white shadow-sm transition focus-within:shadow-md ring-1 ring-neutral-200 focus-within:ring-2 focus-within:ring-lime-500 ${
             lg ? "px-4 py-1" : "px-3 py-0.5"
           }`}
         >
@@ -103,7 +103,7 @@ export function SearchInput({ defaultValue = "", size = "md", action = "/buscar"
           <button
             type="submit"
             disabled={loading || !value.trim()}
-            className={`shrink-0 rounded-xl bg-emerald-600 font-semibold text-white transition active:scale-95 hover:bg-emerald-700 disabled:opacity-60 ${
+            className={`shrink-0 rounded-xl bg-neutral-900 font-semibold text-white transition active:scale-95 hover:bg-neutral-800 disabled:opacity-60 ${
               lg ? "px-3 py-2.5 sm:px-5" : "px-3 py-1.5 text-sm"
             }`}
           >
@@ -174,7 +174,7 @@ function SpinnerIcon({ size = 22 }: { size?: number }) {
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      stroke="#10b981"
+      stroke="#84cc16"
       strokeWidth="2.5"
       strokeLinecap="round"
       className="animate-spin"

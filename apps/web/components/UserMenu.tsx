@@ -24,7 +24,7 @@ export function UserMenu() {
     return (
       <Link
         href="/login"
-        className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition active:scale-95 hover:bg-emerald-700"
+        className="rounded-full bg-neutral-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition active:scale-95 hover:bg-neutral-800"
       >
         Iniciar sesión
       </Link>
@@ -37,7 +37,7 @@ export function UserMenu() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-emerald-600 text-sm font-bold text-white ring-2 ring-white shadow-sm transition active:scale-95"
+        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-neutral-900 text-sm font-bold text-white ring-2 ring-white shadow-sm transition active:scale-95"
         aria-label="Mi cuenta"
       >
         {session.user.image ? (

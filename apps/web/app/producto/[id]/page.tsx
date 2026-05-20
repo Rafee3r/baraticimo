@@ -83,7 +83,7 @@ export default async function ProductPage({ params }: Props) {
   if (history.length >= 5) {
     const position = (p.price - minHist) / span;
     if (position <= 0.15) {
-      priceBadge = { emoji: "🟢", label: "En su mínimo histórico", bg: "bg-emerald-50", text: "text-emerald-800" };
+      priceBadge = { emoji: "🟢", label: "En su mínimo histórico", bg: "bg-lime-50", text: "text-lime-800" };
     } else if (position >= 0.85) {
       priceBadge = { emoji: "🔴", label: "En su precio máximo", bg: "bg-red-50", text: "text-red-800" };
     } else {
@@ -163,7 +163,7 @@ export default async function ProductPage({ params }: Props) {
           )}
         </div>
         {p.ahorro && (
-          <div className="mt-1 text-sm text-emerald-400">
+          <div className="mt-1 text-sm text-lime-400">
             Ahorras <strong>{formatCLP(p.ahorro)}</strong>
           </div>
         )}
@@ -203,7 +203,7 @@ export default async function ProductPage({ params }: Props) {
                 return (
                   <tr
                     key={v.id}
-                    className={`border-b border-neutral-100 last:border-0 ${isCheapest ? "bg-emerald-50" : ""}`}
+                    className={`border-b border-neutral-100 last:border-0 ${isCheapest ? "bg-lime-50" : ""}`}
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -215,14 +215,14 @@ export default async function ProductPage({ params }: Props) {
                           {v.chainName}
                         </span>
                         {isCheapest && i === 0 && (
-                          <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                          <span className="rounded-full bg-lime-100 px-1.5 py-0.5 text-[10px] font-bold text-lime-800">
                             🏆 más barato
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className={`font-bold ${isCheapest ? "text-emerald-700" : "text-neutral-700"}`}>
+                      <span className={`font-bold ${isCheapest ? "text-lime-700" : "text-neutral-700"}`}>
                         {formatCLP(v.price)}
                       </span>
                       {!isCheapest && cheapestPrice < v.price && (
@@ -262,9 +262,9 @@ export default async function ProductPage({ params }: Props) {
               const isCurrent = i === history.slice(-30).length - 1;
               const heightPct = ((h.price - minHist) / span) * 100;
               const barColor = isCurrent
-                ? "bg-emerald-500"
+                ? "bg-lime-500"
                 : isMin
-                  ? "bg-emerald-300"
+                  ? "bg-lime-300"
                   : isMax
                     ? "bg-red-300"
                     : "bg-neutral-200";
@@ -280,8 +280,8 @@ export default async function ProductPage({ params }: Props) {
           </div>
           {/* Leyenda */}
           <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-neutral-500">
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-emerald-500" /> Hoy</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-emerald-300" /> Mínimo</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-lime-500" /> Hoy</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-lime-300" /> Mínimo</span>
             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-red-300" /> Máximo</span>
           </div>
         </div>

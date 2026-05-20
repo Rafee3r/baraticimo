@@ -130,7 +130,7 @@ export function LoginClient() {
               placeholder="Tu nombre (opcional)"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
             />
           )}
           <input
@@ -139,7 +139,7 @@ export function LoginClient() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
           />
           <input
             type="password"
@@ -148,7 +148,7 @@ export function LoginClient() {
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
           />
 
           {error && (
@@ -160,7 +160,7 @@ export function LoginClient() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50"
+            className="w-full rounded-xl bg-neutral-900 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-neutral-800 active:scale-[0.98] disabled:opacity-50"
           >
             {loading
               ? "Procesando..."
@@ -178,7 +178,7 @@ export function LoginClient() {
               setMode(mode === "login" ? "signup" : "login");
               setError(null);
             }}
-            className="font-semibold text-emerald-600 hover:underline"
+            className="font-semibold text-lime-600 hover:underline"
           >
             {mode === "login" ? "Crear una" : "Iniciar sesión"}
           </button>

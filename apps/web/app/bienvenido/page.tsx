@@ -23,19 +23,19 @@ export default async function BienvenidoPage() {
   return (
     <main className="-mx-4 -mt-1 md:-mx-0">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-800 to-neutral-900 px-6 pb-14 pt-12 text-white sm:px-10 sm:pt-16">
+      <section className="relative overflow-hidden bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-900 px-6 pb-14 pt-12 text-white sm:px-10 sm:pt-16">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-white/20 backdrop-blur">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-lime-200 ring-1 ring-white/20 backdrop-blur">
             🇨🇱 La forma más fácil de ahorrar en Chile
           </span>
           <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
             Ahorra hasta un{" "}
-            <span className="bg-gradient-to-r from-yellow-300 to-emerald-300 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-yellow-300 to-lime-400 bg-clip-text text-transparent">
               30% en tu compra
             </span>{" "}
             del mes
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-base text-emerald-100 sm:text-lg">
+          <p className="mx-auto mt-4 max-w-xl text-base text-lime-100 sm:text-lg">
             Compara precios entre Jumbo, Líder, Santa Isabel, Tottus, Unimarc y
             las farmacias más grandes. Arma tu lista y la app te dice dónde te
             sale más barata.
@@ -43,7 +43,7 @@ export default async function BienvenidoPage() {
           <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/login"
-              className="w-full rounded-2xl bg-white px-6 py-4 text-base font-bold text-emerald-800 shadow-lg transition active:scale-95 hover:bg-emerald-50 sm:w-auto sm:px-8"
+              className="w-full rounded-2xl bg-white px-6 py-4 text-base font-bold text-lime-800 shadow-lg transition active:scale-95 hover:bg-lime-50 sm:w-auto sm:px-8"
             >
               Empezar gratis →
             </Link>
@@ -54,7 +54,7 @@ export default async function BienvenidoPage() {
               Ver la app
             </Link>
           </div>
-          <p className="mt-3 text-xs text-emerald-200">
+          <p className="mt-3 text-xs text-lime-200">
             Gratis · Sin tarjeta · 0 spam
           </p>
         </div>
@@ -70,7 +70,7 @@ export default async function BienvenidoPage() {
       {/* Problema → Solución */}
       <section className="bg-white px-6 py-14 sm:px-10">
         <div className="mx-auto max-w-3xl">
-          <p className="text-center text-sm font-semibold uppercase tracking-widest text-emerald-600">
+          <p className="text-center text-sm font-semibold uppercase tracking-widest text-lime-600">
             ¿Te suena?
           </p>
           <h2 className="mt-2 text-center text-2xl font-bold sm:text-3xl">
@@ -183,20 +183,20 @@ export default async function BienvenidoPage() {
       </section>
 
       {/* CTA final */}
-      <section className="bg-gradient-to-br from-emerald-600 to-emerald-800 px-6 py-16 text-center text-white sm:px-10">
+      <section className="bg-gradient-to-br from-neutral-900 to-neutral-800 px-6 py-16 text-center text-white sm:px-10">
         <h2 className="text-2xl font-extrabold sm:text-3xl">
           Empieza a ahorrar hoy
         </h2>
-        <p className="mx-auto mt-3 max-w-md text-base text-emerald-100">
+        <p className="mx-auto mt-3 max-w-md text-base text-lime-100">
           Crea tu cuenta en 30 segundos y arma tu primera lista.
         </p>
         <Link
           href="/login"
-          className="mt-7 inline-block rounded-2xl bg-white px-8 py-4 text-base font-bold text-emerald-800 shadow-lg transition active:scale-95 hover:bg-emerald-50"
+          className="mt-7 inline-block rounded-2xl bg-white px-8 py-4 text-base font-bold text-lime-800 shadow-lg transition active:scale-95 hover:bg-lime-50"
         >
           Crear mi cuenta gratis →
         </Link>
-        <p className="mt-4 text-xs text-emerald-200">
+        <p className="mt-4 text-xs text-lime-200">
           Hecho con ♥ en Chile
         </p>
       </section>
@@ -210,7 +210,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       <div className={`text-xl font-extrabold sm:text-2xl ${accent ? "text-yellow-300" : "text-white"}`}>
         {value}
       </div>
-      <div className="mt-0.5 text-[10px] uppercase tracking-wider text-emerald-200 sm:text-xs">
+      <div className="mt-0.5 text-[10px] uppercase tracking-wider text-lime-200 sm:text-xs">
         {label}
       </div>
     </div>
@@ -221,7 +221,7 @@ function Step({ num, emoji, title, text }: { num: string; emoji: string; title: 
   return (
     <div className="rounded-3xl bg-white p-6 ring-1 ring-neutral-200">
       <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-lime-100 text-sm font-bold text-lime-700">
           {num}
         </span>
         <span className="text-2xl">{emoji}</span>

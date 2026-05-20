@@ -160,7 +160,7 @@ export default async function SearchPage({ searchParams }: Props) {
           </p>
           <Link
             href="/"
-            className="mt-4 inline-block rounded-full bg-emerald-600 px-5 py-2 text-sm font-medium text-white"
+            className="mt-4 inline-block rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white"
           >
             Volver al inicio
           </Link>
@@ -206,7 +206,7 @@ function FilterChip({
       ? "bg-neutral-900 text-white shadow"
       : variant === "chain"
         ? "bg-neutral-800 text-white shadow"
-        : "bg-emerald-600 text-white shadow";
+        : "bg-neutral-900 text-white shadow";
   const inactiveClass = "bg-white text-neutral-600 ring-1 ring-neutral-200 hover:ring-neutral-300";
   return (
     <Link href={href} className={`${base} ${active ? activeClass : inactiveClass}`}>

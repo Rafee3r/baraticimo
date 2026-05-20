@@ -14,28 +14,42 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+          background: "#0a0a0a",
           borderRadius: 112,
         }}
       >
         <div
           style={{
             display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
+            flexDirection: "row",
+            alignItems: "baseline",
             gap: 0,
           }}
         >
-          {/* Cart icon usando caracteres */}
+          {/* Lowercase "b" mark - lime accent, white stem */}
           <div
             style={{
-              fontSize: 260,
+              fontSize: 360,
               lineHeight: 1,
-              color: "white",
+              fontWeight: 900,
+              color: "#84cc16",
+              fontFamily: "system-ui, sans-serif",
+              letterSpacing: -20,
             }}
           >
-            🛒
+            b
           </div>
+          {/* Yellow accent dot (price marker) */}
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              background: "#fde047",
+              marginLeft: -16,
+              marginBottom: 24,
+            }}
+          />
         </div>
       </div>
     ),

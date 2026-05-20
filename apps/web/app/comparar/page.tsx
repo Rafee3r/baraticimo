@@ -120,7 +120,7 @@ export default async function CompararPage({ searchParams }: Props) {
                       {p.name}
                     </Link>
                     {maxSavings > 0 && (
-                      <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-bold text-emerald-800">
+                      <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-lime-100 px-3 py-0.5 text-xs font-bold text-lime-800">
                         Ahorra hasta {formatCLP(maxSavings)} eligiendo bien
                       </div>
                     )}
@@ -136,7 +136,7 @@ export default async function CompararPage({ searchParams }: Props) {
                       return (
                         <tr
                           key={v.id}
-                          className={`border-t border-neutral-100 ${isCheapest ? "bg-emerald-50" : ""}`}
+                          className={`border-t border-neutral-100 ${isCheapest ? "bg-lime-50" : ""}`}
                         >
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export default async function CompararPage({ searchParams }: Props) {
                               />
                               <span className="font-medium">{v.chainName}</span>
                               {isCheapest && (
-                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                                <span className="rounded-full bg-lime-100 px-2 py-0.5 text-[10px] font-bold text-lime-800">
                                   🏆
                                 </span>
                               )}
@@ -154,7 +154,7 @@ export default async function CompararPage({ searchParams }: Props) {
                           </td>
                           <td className="px-5 py-3 text-right">
                             <span
-                              className={`text-base font-bold ${isCheapest ? "text-emerald-700" : "text-neutral-700"}`}
+                              className={`text-base font-bold ${isCheapest ? "text-lime-700" : "text-neutral-700"}`}
                             >
                               {formatCLP(v.price)}
                             </span>

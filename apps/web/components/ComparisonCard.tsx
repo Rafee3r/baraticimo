@@ -31,7 +31,7 @@ export function ComparisonCard({ deal }: Props) {
           <Link href={`/producto/${cheaper.id}`} className="line-clamp-2 text-sm font-semibold leading-tight hover:underline">
             {cheaper.name}
           </Link>
-          <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+          <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-lime-100 px-2.5 py-0.5 text-xs font-bold text-lime-800">
             Ahorras {formatCLP(savings)} · {savingsPct}% menos
           </div>
         </div>

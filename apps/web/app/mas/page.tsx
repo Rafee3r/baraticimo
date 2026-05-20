@@ -23,7 +23,7 @@ export default async function MasPage() {
           <div className="mt-0.5 text-xs text-neutral-500">Productos</div>
         </div>
         <div className="rounded-2xl bg-white p-4 text-center ring-1 ring-neutral-200">
-          <div className="text-2xl font-bold text-emerald-600">
+          <div className="text-2xl font-bold text-lime-600">
             {stats.saleCount.toLocaleString("es-CL")}
           </div>
           <div className="mt-0.5 text-xs text-neutral-500">En oferta</div>
@@ -64,7 +64,7 @@ export default async function MasPage() {
               >
                 <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />
                 <span className="font-medium">{c.name}</span>
-                <span className="ml-auto text-[10px] font-bold text-emerald-600">
+                <span className="ml-auto text-[10px] font-bold text-lime-600">
                   ACTIVO
                 </span>
               </div>

@@ -13,7 +13,7 @@ export function CategoryRow() {
           <li key={c.slug} className="shrink-0">
             <Link
               href={`/buscar?cat=${c.slug}`}
-              className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-medium ring-1 ring-neutral-200 transition active:scale-95 hover:ring-emerald-500"
+              className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-medium ring-1 ring-neutral-200 transition active:scale-95 hover:ring-lime-500"
             >
               <span className="text-base leading-none">{c.emoji}</span>
               <span className="whitespace-nowrap">{c.name}</span>
