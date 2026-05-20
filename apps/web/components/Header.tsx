@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ComunaPicker } from "./ComunaPicker";
 import { UserMenu } from "./UserMenu";
 
 export function Header() {
@@ -13,10 +12,7 @@ export function Header() {
           <span className="text-emerald-600">B</span>
           <span>aratícimo</span>
         </Link>
-        <div className="flex items-center gap-3">
-          <ComunaPicker />
-          <UserMenu />
-        </div>
+        <UserMenu />
       </div>
     </header>
   );
