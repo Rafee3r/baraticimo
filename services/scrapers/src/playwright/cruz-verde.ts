@@ -15,13 +15,20 @@ const BASE_URL = "https://www.cruzverde.cl";
 
 // Categorías reales en cruzverde.cl (verificadas con Playwright)
 const CATEGORIES = [
-  "medicamentos",
+  "medicamentos/dolor-y-fiebre",
+  "medicamentos/sistema-respiratorio-y-alergias",
+  "medicamentos/sistema-digestivo",
+  "medicamentos/cardiovascular",
+  "medicamentos/dermatologia",
+  "medicamentos/suplementos-alimenticios",
+  "medicamentos/huesos-y-articulaciones",
+  "medicamentos/ojos-y-oidos",
+  "medicamentos/diabetes",
   "dermocosmetica",
   "infantil-y-mama",
   "vitaminas-y-suplementos",
   "higiene-y-cuidado-personal",
   "cuidado-de-la-piel",
-  "ofertas/ofertas-imperdibles",
 ];
 
 interface ExtractedProduct {

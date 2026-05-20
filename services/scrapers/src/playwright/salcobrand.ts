@@ -15,15 +15,17 @@ const BASE_URL = "https://www.salcobrand.cl";
 // Salcobrand usa /t/<slug> para categorías (verificado con Playwright)
 const CATEGORIES = [
   "t/medicamentos",
+  "t/medicamentos/sistema-nervioso",
+  "t/medicamentos/anticonceptivos-y-hormonas",
   "t/dermocoaching",
+  "t/dermocoaching/rostro",
+  "t/dermocoaching/cuerpo",
+  "t/dermocoaching/proteccion-solar",
   "t/cuidado-personal",
   "t/vitaminas-y-suplementos",
   "t/infantil-y-mama",
   "t/cuidado-de-la-salud",
   "t/adulto-mayor",
-  "t/dermocoaching/rostro",
-  "t/dermocoaching/cuerpo",
-  "t/dermocoaching/proteccion-solar",
 ];
 
 interface ExtractedProduct {
