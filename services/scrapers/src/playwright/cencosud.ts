@@ -61,6 +61,16 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
       let price: number | null = null;
       let listPrice: number | null = null;
 
+      // Detectar precios de referencia por unidad/kg para excluirlos del precio principal.
+      // Ej: "$1.990 /kg", "$890 c/u" — no es el precio del producto.
+      const cardText = a.textContent ?? "";
+      const perUnitRe = /\$\s?[\d.,]+\s*\/\s*(kg|kilo|gr?|ml|lt?|un|unidad|c\/u|c\.u)/gi;
+      const perUnitSet = new Set<number>(
+        Array.from(cardText.matchAll(perUnitRe))
+          .map((m) => parsePrice(m[0]))
+          .filter((v): v is number => v !== null),
+      );
+
       const priceContainers = Array.from(a.querySelectorAll("*")) as HTMLElement[];
       for (const node of priceContainers) {
         const cls = (node.className || "").toString();
@@ -68,12 +78,13 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
 
         const txt = node.textContent ?? "";
         const matches = Array.from(txt.matchAll(/\$\s?[\d.,]+/g)).map((m) => parsePrice(m[0]));
-        const valid = matches.filter((v): v is number => v != null);
+        // Excluir precios de referencia por unidad (precio/kg, c/u, etc.)
+        const valid = matches.filter((v): v is number => v != null && !perUnitSet.has(v));
         if (valid.length === 0) continue;
 
         const struck = Array.from(node.querySelectorAll('[class*="line-through"]'))
           .map((e) => parsePrice(e.textContent ?? ""))
-          .filter((v): v is number => v != null);
+          .filter((v): v is number => v != null && !perUnitSet.has(v));
 
         if (struck.length > 0) {
           listPrice = Math.max(...struck);

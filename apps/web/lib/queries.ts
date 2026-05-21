@@ -49,6 +49,7 @@ function rowFromChainProduct(cp: any): ProductRow | null {
   const latest = cp.prices[0];
   if (!latest) return null;
   const price = Number(latest.price);
+
   // Sanity check: si el listPrice es más de 3× el precio de venta, es
   // probablemente un error de scraping (capturó el precio de otro producto).
   const rawListPrice = latest.listPrice ? Number(latest.listPrice) : null;
@@ -312,17 +313,33 @@ export function dedupResults(rows: ProductRow[]): ProductRow[] {
       if (!existing || r.price < existing.price) byChain.set(r.chainSlug, r);
     }
 
+    // Ordenar por precio y dividir en sub-grupos de precio "compatible".
+    // Umbral: si un producto vale >4× más que el más barato del sub-grupo,
+    // se trata como un producto diferente (distinto gramaje, tamaño, etc.).
+    // Ej: "Hamburguesa 100g $900" y "Hamburguesa 1kg $9.990" no se comparan.
     const sorted = [...byChain.values()].sort((a, b) => a.price - b.price);
-    const primary = sorted[0]!;
-    const others: OtherPrice[] = sorted.slice(1).map((r) => ({
-      id: r.id,
-      chainName: r.chainName,
-      chainColor: r.chainColor,
-      chainSlug: r.chainSlug,
-      price: r.price,
-    }));
+    const subGroups: ProductRow[][] = [];
 
-    result.push({ ...primary, otherPrices: others.length > 0 ? others : undefined });
+    for (const item of sorted) {
+      const lastGroup = subGroups[subGroups.length - 1];
+      if (!lastGroup || item.price > lastGroup[0]!.price * 4) {
+        subGroups.push([item]);
+      } else {
+        lastGroup.push(item);
+      }
+    }
+
+    for (const subGroup of subGroups) {
+      const primary = subGroup[0]!;
+      const others: OtherPrice[] = subGroup.slice(1).map((r) => ({
+        id: r.id,
+        chainName: r.chainName,
+        chainColor: r.chainColor,
+        chainSlug: r.chainSlug,
+        price: r.price,
+      }));
+      result.push({ ...primary, otherPrices: others.length > 0 ? others : undefined });
+    }
   }
 
   return result;

@@ -15,7 +15,8 @@
     "scrape:salcobrand": "tsx src/playwright/salcobrand.ts",
     "scrape:ahumada": "tsx src/playwright/ahumada.ts",
     "probe": "tsx src/playwright/probe.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check-prices": "tsx src/check-prices.ts"
   },
   "dependencies": {
     "@baraticimo/types": "workspace:*",

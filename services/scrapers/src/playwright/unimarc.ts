@@ -128,9 +128,35 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
       name = name.replace(/(\d+\s*[a-zA-Z]+)\s*\1\s*$/i, "$1").trim();
 
       const allText = card.textContent ?? "";
+
+      // Detectar precios de referencia "por unidad" o "por kg" para excluirlos.
+      // Ej: "$1.990 /kg", "$890 c/u", "$244c/u", "$3.50/ml", "c/u $890"
+      const perUnitRe =
+        /\$\s?[\d.,]+\s*\/?\s*(kg|kilo|gr?|ml|lt?|un\.?|unidad|c\.?\/?\s*u\.?)/gi;
+      const perUnitSet = new Set<number>(
+        Array.from(allText.matchAll(perUnitRe))
+          .map((m) => parsePrice(m[0]))
+          .filter((v): v is number => v !== null),
+      );
+      // Patrón inverso: "c/u $890" (etiqueta antes del precio)
+      Array.from(allText.matchAll(/c\.?\/?\s*u\.?\s*[\$:]\s?[\d.,]+/gi))
+        .forEach((m) => {
+          const numMatch = m[0].match(/[\d.,]+$/);
+          if (numMatch) {
+            const v = parsePrice("$" + numMatch[0]);
+            if (v !== null) perUnitSet.add(v);
+          }
+        });
+      // Patrón "X c/u" / "X/u" sin prefijo $ (ej texto "244 c/u")
+      Array.from(allText.matchAll(/\b([\d.,]+)\s*c\.?\/?\s*u\.?\b/gi))
+        .forEach((m) => {
+          const v = parsePrice("$" + m[1]);
+          if (v !== null && v > 100) perUnitSet.add(v);
+        });
+
       const allPrices = Array.from(allText.matchAll(/\$\s?[\d.,]+/g))
         .map((m) => parsePrice(m[0]))
-        .filter((v): v is number => v !== null && v > 100);
+        .filter((v): v is number => v !== null && v > 100 && !perUnitSet.has(v));
 
       if (allPrices.length === 0) continue;
 
