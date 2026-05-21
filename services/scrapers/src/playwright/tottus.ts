@@ -215,9 +215,10 @@ async function scrapeCategory(
   const seen = new Set<string>();
 
   for (let pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
-    // Tottus exige &store=to_com en TODAS las páginas (incluso p1)
-    // sino devuelve 403 para p2+
-    const url = `${BASE_URL}/${category}?page=${pageNum}&store=to_com`;
+    // Tottus exige store=to_com. Para p1 no ponemos page= (algunos WAF lo bloquean).
+    const url = pageNum === 1
+      ? `${BASE_URL}/${category}?store=to_com`
+      : `${BASE_URL}/${category}?page=${pageNum}&store=to_com`;
     console.log(`  → ${url}`);
 
     const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
@@ -314,6 +315,8 @@ async function main() {
     } catch (err) {
       console.error(`  ✗ error en ${cat}:`, (err as Error).message);
     }
+    // Pausa entre categorías para evitar rate-limiting
+    await page.waitForTimeout(3000);
   }
 
   console.log(`✓ tottus: ${total} productos persistidos`);
