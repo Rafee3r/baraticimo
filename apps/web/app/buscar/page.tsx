@@ -48,22 +48,25 @@ export default async function SearchPage({ searchParams }: Props) {
     else if (sortVal === "discount") sorted = sorted.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
     results = dedupResults(sorted);
   } else if (q.trim()) {
-    // smartSearch internamente hace búsqueda directa primero (0 tokens si ≥4 resultados)
-    // y sólo activa IA si los resultados son insuficientes.
-    const [directCount, aiResults] = await Promise.all([
-      searchProducts(q, { limit: 1, inStoreOnly }).then((r) => r.length),
-      smartSearch(q, { limit: 80, inStoreOnly }).catch(() =>
-        searchProducts(q, { limit: 80, inStoreOnly }),
-      ),
-    ]);
+    // Búsqueda directa primero (0 tokens).
+    // Si hay ≥4 resultados, usamos solo esos (sin llamar a la IA).
+    // Si hay <4, invocamos smartSearch que escala a keywords AI → catálogo AI.
+    const direct = await searchProducts(q, { limit: 80, inStoreOnly });
+    let allResults: typeof direct;
+    if (direct.length >= 4) {
+      allResults = direct;
+      aiUsed = false;
+    } else {
+      allResults = await smartSearch(q, { limit: 80, inStoreOnly }).catch(() => direct);
+      aiUsed = allResults.length > direct.length;
+    }
 
-    let sorted = cadena ? aiResults.filter((r) => r.chainSlug === cadena) : aiResults;
+    let sorted = cadena ? allResults.filter((r) => r.chainSlug === cadena) : allResults;
     if (sortVal === "price_asc") sorted = sorted.sort((a, b) => a.price - b.price);
     else if (sortVal === "price_desc") sorted = sorted.sort((a, b) => b.price - a.price);
     else if (sortVal === "discount") sorted = sorted.sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0));
 
     results = dedupResults(sorted);
-    aiUsed = directCount < 4 && results.length > directCount;
   }
 
   if (onlyOffers) results = results.filter((r) => r.isOnSale);

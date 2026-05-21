@@ -78,17 +78,31 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
         const t = (nameEl.textContent ?? "").trim();
         if (t.length > 5 && t.length < 200 && !/\$\s?\d/.test(t) && !/-\d+%/.test(t)) name = t;
       }
+      const looksLikeUI = (t: string): boolean =>
+        /retiro\s+en\s+tienda/i.test(t) ||
+        /despacho\s+a\s+domicilio/i.test(t) ||
+        /pago\s+con\s+excedentes/i.test(t) ||
+        /compra\s+\d+\s+unidades/i.test(t) ||
+        /antes\s*[\n\r]\s*ahora/i.test(t) ||
+        /^antes\s*$/i.test(t) ||
+        /^ahora\s*$/i.test(t) ||
+        /convenio\s+fonasa/i.test(t) ||
+        /bioequivalente\s+retiro/i.test(t) ||
+        /\$\s?\d[\d.,]*/.test(t) ||
+        /-\d+\s*%/.test(t) ||
+        /envío\s+rápido/i.test(t);
+
       if (!name) {
         const textNodes = Array.from(card.querySelectorAll("*"))
-          .map((el) => el.textContent?.trim() ?? "")
+          .map((el) => (el.textContent ?? "").trim())
           .filter((t) =>
-            t.length > 8 && t.length < 200 &&
+            t.length > 8 && t.length < 150 &&
             !/^\$/.test(t) && !/^\d+$/.test(t) &&
-            !/\$\s?\d/.test(t) && !/-\d+\s*%/.test(t) &&
+            !looksLikeUI(t) &&
             !/venta\s+directa/i.test(t) && !/formato\s*:/i.test(t) &&
             !/precio\s*\w*\s*:/i.test(t)
           );
-        name = textNodes.sort((a, b) => b.length - a.length)[0];
+        name = textNodes.sort((a, b) => a.length - b.length).find((t) => t.length >= 10);
       }
       if (!name) continue;
       name = name
@@ -97,6 +111,9 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
         .replace(/\s*precio\s*\w*\s*:.*$/i, "")
         .replace(/\s*\$\s?\d[\d.,]*.*$/, "")
         .replace(/\s*-\d+\s*%.*$/, "")
+        .replace(/retiro\s+en\s+tienda.*$/gi, "")
+        .replace(/despacho\s+a\s+domicilio.*$/gi, "")
+        .replace(/compra\s+\d+\s+unidades.*$/gi, "")
         .trim();
       if (name.length < 5) continue;
 

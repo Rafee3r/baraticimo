@@ -79,12 +79,56 @@ async function extractFromPage(page: Page): Promise<ExtractedProduct[]> {
         if (card.querySelector("img") && /\$\s?[\d.,]+/.test(card.textContent ?? "")) break;
       }
 
-      // Nombre: el texto más largo dentro del link (o la card) que no sea precio
-      const textNodes = Array.from(card.querySelectorAll("*"))
-        .map((el) => el.textContent?.trim() ?? "")
-        .filter((t) => t.length > 8 && t.length < 200 && !/^\$/.test(t) && !/^\d+$/.test(t));
-      const name = textNodes.sort((a, b) => b.length - a.length)[0];
+      // Nombre: intentar primero elementos semánticos específicos de nombre
+      let name: string | undefined;
+      const nameEl = card.querySelector(
+        'h2, h3, h4, [class*="name" i]:not(button), [class*="title" i]:not(button), [class*="product"][class*="text" i]'
+      );
+      if (nameEl) {
+        const t = (nameEl.textContent ?? "").trim();
+        if (t.length > 5 && t.length < 120 && !/\$\s?\d/.test(t) && !/-\d+%/.test(t)) name = t;
+      }
+
+      // Detector de texto UI/promocional que NO es nombre de producto
+      const looksLikeUI = (t: string): boolean =>
+        /precios?\s+incre[íi]bles?/i.test(t) ||
+        /patrocinado/i.test(t) ||
+        /por\s+tottus/i.test(t) ||
+        /retiro\s+en\s+tienda/i.test(t) ||
+        /despacho\s+a\s+domicilio/i.test(t) ||
+        /pago\s+con/i.test(t) ||
+        /compra\s+\d+\s+unidades/i.test(t) ||
+        /\bUN\s+-\d+%/.test(t) ||
+        /^\s*por\s+kg\b/i.test(t) ||
+        /\$\s?\d[\d.,]*\s*UN\b/.test(t) ||
+        /envío\s+rápido/i.test(t);
+
+      if (!name) {
+        // Fallback: texto más corto/razonable que no sea UI ni precio
+        const textNodes = Array.from(card.querySelectorAll("*"))
+          .map((el) => (el.textContent ?? "").trim())
+          .filter(
+            (t) =>
+              t.length > 8 &&
+              t.length < 120 &&
+              !/^\$/.test(t) &&
+              !/^\d+$/.test(t) &&
+              !/\$\s?\d/.test(t) &&
+              !/-\d+\s*%/.test(t) &&
+              !looksLikeUI(t),
+          );
+        // Preferir el texto más CORTO razonable (nombres de producto son concisos)
+        name = textNodes.sort((a, b) => a.length - b.length).find((t) => t.length >= 10);
+      }
       if (!name) continue;
+      // Post-limpieza: quitar fragmentos de UI que se colaron
+      name = name.replace(/precios?\s+incre[íi]bles?\s*/gi, "")
+        .replace(/por\s+tottus\s*/gi, "")
+        .replace(/patrocinado\s*/gi, "")
+        .replace(/\s*\$\s?\d[\d.,]*.*$/, "")
+        .replace(/\s*-\d+\s*%.*$/, "")
+        .trim();
+      if (name.length < 5) continue;
 
       // Precios: todos los "$X.XXX" dentro de la card
       const allText = card.textContent ?? "";
