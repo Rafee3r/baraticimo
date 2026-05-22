@@ -48,8 +48,10 @@ const getCachedCatalogSearch = unstable_cache(
     );
     return Array.isArray(data.ids) ? data.ids.filter(Boolean) : [];
   },
-  ["ai-catalog"],
-  { revalidate: 3600 }, // 1h
+  ["ai-catalog-v2"],
+  { revalidate: 3600, // 1h
+    // IMPORTANTE: la función recibe query como arg, Next.js lo incluye en la cache key
+  }
 );
 
 // ─── API pública ─────────────────────────────────────────────────────────────

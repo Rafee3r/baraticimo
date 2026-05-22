@@ -207,9 +207,13 @@ function filterIrrelevant(rows: ProductRow[], query: string): ProductRow[] {
     return words.reduce((s, w) => s + relevanceScore(r, w), 0) / words.length;
   };
 
+  // Solo filtrar resultados con score = 5 (el query apareció por ILIKE pero no
+  // está realmente en el nombre procesado — coincidencia de substring sin sentido).
+  // Threshold 20 era demasiado agresivo: eliminaba "Hamburguesa de Pollo" al
+  // buscar "pollo" cuando también existía "Pollo Entero" (score 90).
   const maxScore = filtered.reduce((m, r) => Math.max(m, scoreOf(r)), 0);
-  if (maxScore >= 70) {
-    filtered = filtered.filter((r) => scoreOf(r) >= 30);
+  if (maxScore >= 50) {
+    filtered = filtered.filter((r) => scoreOf(r) > 5);
   }
 
   // Fallback: si filtramos todo, devolver al menos algo decente
@@ -345,20 +349,25 @@ export function dedupResults(rows: ProductRow[]): ProductRow[] {
   return result;
 }
 
-/** Productos destacados para el home: ofertas con buen % de descuento. */
+/** Productos destacados para el home: mejores ofertas activas (isOnSale=true). */
 export async function getFeaturedProducts(limit = 12): Promise<ProductRow[]> {
+  // Buscar directamente en Price donde isOnSale=true para evitar el problema de
+  // tomar los 200 más recientes (que pueden no tener ofertas activas).
   const cps = await prisma.chainProduct.findMany({
+    where: {
+      prices: { some: { isOnSale: true } },
+    },
     include: {
       chain: true,
       prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
     },
-    take: 200,
+    take: 400,
     orderBy: { lastSeenAt: "desc" },
   });
   const rows = cps
     .map(rowFromChainProduct)
     .filter((r): r is ProductRow => r !== null)
-    .filter((r) => r.isOnSale && r.ahorroPct !== null)
+    .filter((r) => r.isOnSale && r.ahorroPct !== null && r.ahorroPct >= 5)
     .sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0))
     .slice(0, limit);
   return rows;
@@ -742,15 +751,27 @@ export interface CrossChainDeal {
 
 const _computeDeals = unstable_cache(
   async (limit: number): Promise<CrossChainDeal[]> => {
-    const featured = await getFeaturedProducts(40);
-    const deals: CrossChainDeal[] = [];
-    // Máximo 45% de ahorro y mínimo $300 de diferencia para que el deal sea creíble.
-    // Evita mostrar comparaciones donde el "match" no es el mismo producto.
-    const MAX_SAVINGS_PCT = 45;
-    const MIN_SAVINGS_ABS = 300;
+    // Tomamos hasta 300 productos de distintas cadenas para buscar matches cross-chain.
+    // No limitamos a isOnSale — buscamos el mismo producto a distinto precio entre cadenas.
+    const sample = await prisma.chainProduct.findMany({
+      include: {
+        chain: true,
+        prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
+      },
+      take: 300,
+      orderBy: { lastSeenAt: "desc" },
+    });
 
-    for (const product of featured) {
-      if (deals.length >= limit * 3) break;
+    const sampleRows = sample
+      .map(rowFromChainProduct)
+      .filter((r): r is ProductRow => r !== null);
+
+    const deals: CrossChainDeal[] = [];
+    const MIN_SAVINGS_ABS = 300;
+    const MAX_SAVINGS_PCT = 50; // hasta 50% de diferencia entre cadenas es creíble
+
+    for (const product of sampleRows) {
+      if (deals.length >= limit * 4) break;
       const matches = await getCrossChainMatches(product.id, 3);
 
       for (const match of matches) {
@@ -759,20 +780,18 @@ const _computeDeals = unstable_cache(
         const savings = high - low;
         const savingsPct = Math.round((savings / high) * 100);
 
-        // Filtros de calidad: diferencia mínima $300 y máximo 45%
         if (savings < MIN_SAVINGS_ABS) continue;
         if (savingsPct > MAX_SAVINGS_PCT) continue;
 
         const cheaper = product.price <= match.price ? product : match;
         const pricier = product.price <= match.price ? match : product;
-
         deals.push({ cheaper, pricier, savings, savingsPct });
-        break; // 1 deal por producto fuente es suficiente
+        break;
       }
     }
     return deals.sort((a, b) => b.savings - a.savings).slice(0, limit);
   },
-  ["top-cross-chain-deals"],
+  ["top-cross-chain-deals-v2"],
   { revalidate: 1800 },
 );
 
