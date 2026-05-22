@@ -349,28 +349,57 @@ export function dedupResults(rows: ProductRow[]): ProductRow[] {
   return result;
 }
 
-/** Productos destacados para el home: mejores ofertas activas (isOnSale=true). */
+/** Productos destacados para el home: mejores ofertas activas (isOnSale=true en el ÚLTIMO precio). */
 export async function getFeaturedProducts(limit = 12): Promise<ProductRow[]> {
-  // Buscar directamente en Price donde isOnSale=true para evitar el problema de
-  // tomar los 200 más recientes (que pueden no tener ofertas activas).
-  const cps = await prisma.chainProduct.findMany({
-    where: {
-      prices: { some: { isOnSale: true } },
-    },
-    include: {
-      chain: true,
-      prices: { orderBy: { scrapedAt: "desc" }, take: 1 },
-    },
-    take: 400,
-    orderBy: { lastSeenAt: "desc" },
-  });
-  const rows = cps
-    .map(rowFromChainProduct)
-    .filter((r): r is ProductRow => r !== null)
-    .filter((r) => r.isOnSale && r.ahorroPct !== null && r.ahorroPct >= 5)
+  // SQL: toma productos cuyo precio MÁS RECIENTE tiene isOnSale=true y
+  // un listPrice razonable (entre 1× y 3× el precio actual).
+  // Prisma ORM no permite filtrar por "latest price", así que usamos raw SQL.
+  type Row = {
+    id: string; externalId: string; name: string; brand: string | null; format: string | null;
+    imageUrl: string | null; url: string; isOnlineOnly: boolean; category: string | null;
+    lastSeenAt: Date; chainSlug: string; chainName: string;
+    price: number; listPrice: number | null; isOnSale: boolean; scrapedAt: Date;
+  };
+  const rows = await prisma.$queryRaw<Row[]>`
+    SELECT DISTINCT ON (cp.id)
+      cp.id, cp."externalId", cp.name, cp.brand, cp.format,
+      cp."imageUrl", cp.url, cp."isOnlineOnly", cp.category, cp."lastSeenAt",
+      ch.slug AS "chainSlug", ch.name AS "chainName",
+      pr.price::int, pr."listPrice"::int, pr."isOnSale", pr."scrapedAt"
+    FROM "ChainProduct" cp
+    JOIN "Chain" ch ON ch.id = cp."chainId"
+    JOIN "Price" pr ON pr."chainProductId" = cp.id
+    WHERE pr."isOnSale" = true
+      AND pr."listPrice" IS NOT NULL
+      AND pr."listPrice" > pr.price
+      AND pr."listPrice" <= pr.price * 3
+      AND pr."scrapedAt" = (
+        SELECT MAX(pr2."scrapedAt") FROM "Price" pr2 WHERE pr2."chainProductId" = cp.id
+      )
+    ORDER BY cp.id, pr."scrapedAt" DESC
+    LIMIT ${limit * 10}
+  `;
+
+  return rows
+    .map((r) => {
+      const price = Number(r.price);
+      const rawList = r.listPrice ? Number(r.listPrice) : null;
+      const listPrice = rawList && rawList > price && rawList <= price * 3 ? rawList : null;
+      const ahorro = listPrice ? listPrice - price : null;
+      const ahorroPct = ahorro && listPrice ? Math.round((ahorro / listPrice) * 100) : null;
+      return {
+        id: r.id, externalId: r.externalId, name: r.name, brand: r.brand ?? null,
+        format: r.format ?? null, imageUrl: r.imageUrl ?? null, url: r.url,
+        chainSlug: r.chainSlug, chainName: r.chainName,
+        chainColor: CHAIN_COLORS[r.chainSlug] ?? "#666666",
+        price, listPrice, isOnSale: r.isOnSale, isOnlineOnly: r.isOnlineOnly,
+        scrapedAt: r.scrapedAt.toISOString(), ahorro, ahorroPct,
+        category: r.category ?? null,
+      } satisfies ProductRow;
+    })
+    .filter((r) => r.ahorroPct !== null && r.ahorroPct >= 5)
     .sort((a, b) => (b.ahorroPct ?? 0) - (a.ahorroPct ?? 0))
     .slice(0, limit);
-  return rows;
 }
 
 /**

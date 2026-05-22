@@ -3,6 +3,7 @@ import {
   getFeaturedProducts,
   getOffersByCategory,
   getTopCrossChainDeals,
+  getStats,
 } from "../lib/queries";
 import { SearchInput } from "../components/SearchInput";
 import { CategoryRow } from "../components/CategoryRow";
@@ -12,7 +13,7 @@ import { ComparisonCard } from "../components/ComparisonCard";
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [topDeals, crossChainDeals, lacteos, carnes, frutasVerduras, farmacia] =
+  const [topDeals, crossChainDeals, lacteos, carnes, frutasVerduras, farmacia, stats] =
     await Promise.all([
       getFeaturedProducts(10),
       getTopCrossChainDeals(4).catch(() => []),
@@ -20,24 +21,64 @@ export default async function HomePage() {
       getOffersByCategory("carnes", 8),
       getOffersByCategory("frutas-verduras", 8),
       getOffersByCategory("farmacia", 8),
+      getStats().catch(() => null),
     ]);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pt-3 sm:px-6 sm:pt-5">
-      {/* Hero compacto — solo lo esencial */}
-      <section className="rounded-2xl bg-gradient-to-br from-neutral-900 to-black p-4 shadow-md sm:p-5">
-        <h1 className="text-lg font-bold text-white sm:text-xl">
-          Compara y ahorra en tu compra
-        </h1>
-        <div className="mt-3">
-          <SearchInput size="md" />
+    <main className="mx-auto max-w-5xl px-4 pb-10 sm:px-6">
+      {/* ── HERO: buscador central ── */}
+      <section className="relative -mx-4 overflow-hidden bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-800 px-4 pb-8 pt-8 sm:-mx-6 sm:px-6 sm:pb-10 sm:pt-10">
+        {/* Glow decorativo */}
+        <div className="pointer-events-none absolute -top-20 left-1/2 h-64 w-96 -translate-x-1/2 rounded-full bg-lime-500/10 blur-3xl" />
+
+        {/* Tagline */}
+        <div className="mb-5 text-center">
+          <span className="inline-block rounded-full bg-lime-500/15 px-3 py-1 text-xs font-semibold text-lime-400 ring-1 ring-lime-500/30">
+            🛒 Compara precios en 7 cadenas
+          </span>
+          <h1 className="mt-3 text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl">
+            ¿Dónde conviene comprar hoy?
+          </h1>
+          <p className="mt-1.5 text-sm text-neutral-400 sm:text-base">
+            Busca un producto y ve el precio en cada supermercado y farmacia
+          </p>
         </div>
+
+        {/* Buscador grande */}
+        <div className="mx-auto max-w-xl">
+          <SearchInput size="lg" />
+        </div>
+
+        {/* Stats rápidas */}
+        {stats && (
+          <div className="mt-5 flex justify-center gap-6 text-center">
+            <div>
+              <p className="text-lg font-bold text-white">{stats.productCount.toLocaleString("es-CL")}</p>
+              <p className="text-[11px] text-neutral-500">productos</p>
+            </div>
+            <div className="w-px bg-neutral-700" />
+            <div>
+              <p className="text-lg font-bold text-lime-400">{stats.saleCount.toLocaleString("es-CL")}</p>
+              <p className="text-[11px] text-neutral-500">en oferta ahora</p>
+            </div>
+            <div className="w-px bg-neutral-700" />
+            <div>
+              <p className="text-lg font-bold text-white">7</p>
+              <p className="text-[11px] text-neutral-500">cadenas</p>
+            </div>
+          </div>
+        )}
       </section>
 
-      {/* Categorías como pills */}
+      {/* Categorías */}
       <section className="mt-4">
         <CategoryRow />
       </section>
+
+      {/* Top ofertas */}
+      {topDeals.length > 0 && (
+        <SectionRow title="🔥 Top ofertas" link="/buscar?ofertas=1" products={topDeals} />
+      )}
 
       {/* Comparativas cross-chain */}
       {crossChainDeals.length > 0 && (
@@ -56,10 +97,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Top ofertas hoy */}
-      <SectionRow title="🔥 Top ofertas" link="/buscar?ofertas=1" products={topDeals} />
-
-      {/* Categorías de productos clasificados por IA — NO matching por texto */}
+      {/* Categorías de productos */}
       <SectionRow title="🥛 Lácteos" link="/buscar?cat=lacteos" products={lacteos} />
       <SectionRow title="🥩 Carnes" link="/buscar?cat=carnes" products={carnes} />
       <SectionRow title="🥬 Frutas y verduras" link="/buscar?cat=frutas-verduras" products={frutasVerduras} />

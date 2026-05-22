@@ -78,12 +78,12 @@ export function SearchInput({ defaultValue = "", size = "md", action = "/buscar"
         className="w-full"
       >
         <div
-          className={`flex items-center gap-2 rounded-2xl bg-white shadow-sm transition focus-within:shadow-md ring-1 ring-neutral-200 focus-within:ring-2 focus-within:ring-lime-500 ${
-            lg ? "px-4 py-1" : "px-3 py-0.5"
+          className={`flex items-center gap-2 rounded-2xl bg-white shadow-sm transition focus-within:shadow-lg ring-1 ring-neutral-200 focus-within:ring-2 focus-within:ring-lime-500 ${
+            lg ? "px-4 py-2" : "px-3 py-0.5"
           }`}
         >
           {loading ? (
-            <SpinnerIcon size={lg ? 22 : 18} />
+            <SpinnerIcon size={lg ? 24 : 18} />
           ) : (
             <span className={lg ? "text-2xl" : "text-lg"}>🔍</span>
           )}
@@ -97,20 +97,22 @@ export function SearchInput({ defaultValue = "", size = "md", action = "/buscar"
             onBlur={() => setTimeout(() => setFocused(false), 150)}
             placeholder={`Buscar ${PLACEHOLDERS[phIdx]}…`}
             className={`flex-1 bg-transparent text-neutral-900 placeholder:text-neutral-400 outline-none ${
-              lg ? "py-3 text-lg" : "py-2 text-base"
+              lg ? "py-3 text-xl font-medium" : "py-2 text-base"
             }`}
           />
           <button
             type="submit"
             disabled={loading || !value.trim()}
-            className={`shrink-0 rounded-xl bg-neutral-900 font-semibold text-white transition active:scale-95 hover:bg-neutral-800 disabled:opacity-60 ${
-              lg ? "px-3 py-2.5 sm:px-5" : "px-3 py-1.5 text-sm"
+            className={`shrink-0 rounded-xl font-semibold text-white transition active:scale-95 disabled:opacity-50 ${
+              lg
+                ? "bg-lime-500 px-5 py-3 text-base hover:bg-lime-400 disabled:bg-neutral-400"
+                : "bg-neutral-900 px-3 py-1.5 text-sm hover:bg-neutral-800"
             }`}
           >
             {lg ? (
               <>
                 <span className="sm:hidden">→</span>
-                <span className="hidden sm:inline">Buscar</span>
+                <span className="hidden sm:inline">Comparar →</span>
               </>
             ) : (
               "Buscar"
