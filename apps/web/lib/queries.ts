@@ -798,9 +798,12 @@ const _computeDeals = unstable_cache(
     const deals: CrossChainDeal[] = [];
     const MIN_SAVINGS_ABS = 300;
     const MAX_SAVINGS_PCT = 50; // hasta 50% de diferencia entre cadenas es creíble
+    const MAX_ITERS = 60; // máximo 60 queries DB para no agotar tiempo en Vercel build
+    let iters = 0;
 
     for (const product of sampleRows) {
       if (deals.length >= limit * 4) break;
+      if (iters++ >= MAX_ITERS) break;
       const matches = await getCrossChainMatches(product.id, 3);
 
       for (const match of matches) {
